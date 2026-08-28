@@ -1,0 +1,46 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Dependencies
+node_modules/
+vendor/
+.venv/
+venv/
+
+# Build and test output
+build/
+dist/
+coverage/
+.coverage
+.pytest_cache/
+.next/
+out/
+target/
+
+# Caches
+.cache/
+__pycache__/
+*.py[cod]
+*.tsbuildinfo
+
+# Logs and runtime files
+*.log
+*.pid
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+
+# Local scratch space
+tmp/
+temp/
+
