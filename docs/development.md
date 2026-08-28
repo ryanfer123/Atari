@@ -2,13 +2,15 @@
 
 ## Prerequisites
 
-Add required language runtimes, package managers, services, and supported
-versions here when the implementation stack is selected.
+The planned toolchain includes Flutter, Dart, Android Studio, the Android SDK,
+the Android NDK, CMake, Git, and a physical Android device. Exact supported
+versions will be pinned when the Flutter project is initialized.
 
 ## Local setup
 
-Document commands for installing dependencies, configuring local environment
-variables, and starting the project.
+Application initialization has not started. Add verified dependency installation,
+environment configuration, device setup, and launch commands here as they become
+available.
 
 ## Quality checks
 
@@ -21,4 +23,3 @@ Keep one documented command for each routine check:
 
 Prefer wrapper scripts in `scripts/` so local development and continuous
 integration run the same commands.
-

@@ -10,6 +10,11 @@ node_modules/
 vendor/
 .venv/
 venv/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
 
 # Build and test output
 build/
@@ -20,6 +25,18 @@ coverage/
 .next/
 out/
 target/
+
+# Flutter and Android generated files
+android/.gradle/
+android/local.properties
+android/**/GeneratedPluginRegistrant.java
+android/**/generated/
+*.apk
+*.aab
+
+# Local model weights
+*.gguf
+*.bin
 
 # Caches
 .cache/
@@ -43,4 +60,3 @@ Thumbs.db
 # Local scratch space
 tmp/
 temp/
-

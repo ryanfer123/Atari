@@ -18,7 +18,13 @@ Suggested branch prefixes:
 
 ## Code organization
 
-- Group `src/` code by product feature or domain once the implementation begins.
+- Group Flutter product code by feature inside `lib/features/`.
+- Keep deterministic behavioural logic in `lib/engine/`, separate from UI and
+  language-model explanation.
+- Keep Android sensing and permission code inside `android/`.
+- Keep native inference code and bridges inside `native/`.
+- Keep XP, quests, streaks, and achievements inside the gamification boundary;
+  do not couple progression rules directly to UI components.
 - Keep shared code intentionally small and name it by responsibility.
 - Place configuration in `config/`; do not commit credentials or local secrets.
 - Make scripts safe to run repeatedly and document their inputs.
@@ -36,4 +42,3 @@ Document local development setup
 
 Before requesting review, confirm that formatting, static checks, and automated
 tests pass for the selected implementation stack.
-

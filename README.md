@@ -1,35 +1,56 @@
-# Atari
+# ATARI
 
-Atari is organized as a maintainable, technology-neutral project repository. The
-current structure separates product code, tests, documentation, configuration,
-automation, and static assets so each area has a clear owner and purpose.
+**Empathetic Intelligence for User Productivity & On-Device Orchestration**
+
+ATARI is a privacy-first Android productivity system that learns a user's normal
+phone behaviour, detects unusual behavioural fragmentation, offers empathetic
+interventions, and rewards intentional recovery through XP, levels, quests,
+streaks, and achievements.
+
+The repository is structured for a Flutter interface, native Android sensing,
+local statistical analysis, and on-device language-model inference. Application
+implementation has not started yet.
 
 ## Repository structure
 
 ```text
 Atari/
-├── .github/        GitHub collaboration templates
-├── assets/         Static project assets
-├── config/         Version-controlled configuration
-├── docs/           Architecture and development documentation
-├── scripts/        Development, build, and release automation
-├── src/            Application and library source code
-├── tests/          Automated tests and test support files
-├── .editorconfig   Shared editor defaults
-├── .gitignore      Files intentionally excluded from Git
-├── CONTRIBUTING.md Contribution workflow
-└── README.md       Project overview
+├── .github/           GitHub collaboration templates
+├── android/           Kotlin services and Android platform integration
+├── assets/            Icons, animations, and local model assets
+├── config/            Version-controlled configuration
+├── docs/              Architecture and development documentation
+├── integration_test/  End-to-end Flutter and device flows
+├── lib/               Flutter application and behavioural engine
+│   ├── core/          Shared models, services, storage, and design system
+│   ├── engine/        Detection, orchestration, feedback, and progression
+│   └── features/      User-facing product features
+├── native/            llama.cpp runtime and native model bridge
+├── research/          Research evidence and implementation decisions
+├── scripts/           Development, build, benchmark, and release automation
+├── test/              Unit and widget tests
+├── .editorconfig      Shared editor defaults
+├── .gitignore         Files intentionally excluded from Git
+├── CONTRIBUTING.md    Contribution workflow
+└── README.md          Project overview
 ```
 
-## Getting started
+## Architectural boundaries
 
-The implementation stack has not been committed yet. Once it is selected:
+- The statistical engine detects behavioural deviation.
+- The local language model explains structured evidence; it does not perform
+  detection or make medical or psychological diagnoses.
+- Gamification rewards intentional action and recovery, not simply reduced
+  screen time.
+- Core behavioural data and inference remain on the device.
 
-1. Add its dependency manifest and lockfile at the repository root.
-2. Organize implementation code by feature inside `src/`.
-3. Mirror important source boundaries in `tests/`.
-4. Put repeatable developer commands in `scripts/`.
-5. Record setup instructions and architectural decisions in `docs/`.
+## Planned stack
+
+- Flutter and Dart for the application interface
+- Kotlin and Android SDK services for behavioural sensing
+- SQLite with Drift for local storage
+- Welford statistics and Z-scores for personal baselines
+- llama.cpp with a quantised Gemma model for local explanations
+- Android TextToSpeech for optional spoken interventions
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the working conventions.
-
