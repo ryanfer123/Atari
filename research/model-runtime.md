@@ -95,6 +95,13 @@ The runtime-independent contract enforces these rules before UI delivery:
 
 ## Device benchmark gate
 
+The first physical-device runtime smoke test completed on 2026-08-29. The
+upstream arm64 sample built, installed, launched, and loaded the
+`armv9.2_2` GGML CPU backend on the iQOO 15. This proves runtime and ABI
+compatibility, but it is not an inference benchmark because no model weights were
+loaded. The captured baseline is in
+`research/device-results/2026-08-29-iqoo-15-runtime-smoke.json`.
+
 Run both viable runtimes against the same prompt set on the actual iQOO device and
 record:
 

@@ -1,11 +1,15 @@
 {
   "schemaVersion": 1,
   "device": {
-    "manufacturer": "iQOO",
-    "model": "TO_BE_RECORDED",
-    "soc": "TO_BE_RECORDED",
-    "ramBytes": null,
-    "androidVersion": "TO_BE_RECORDED"
+    "manufacturer": "vivo",
+    "brand": "iQOO",
+    "marketingName": "iQOO 15",
+    "model": "I2501",
+    "soc": "QTI SM8850",
+    "ramBytes": 15959269376,
+    "androidVersion": "16",
+    "apiLevel": 36,
+    "abi": "arm64-v8a"
   },
   "protocol": {
     "airplaneMode": true,
