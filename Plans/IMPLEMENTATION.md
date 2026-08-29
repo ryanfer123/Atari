@@ -111,6 +111,27 @@ version, since it changes the architecture below:
   boundary, now with the evidence behind it made explicit, and a self-audit checklist (§4.7) to check it
   was actually followed.
 
+## 0.4 Scope expansion: flagship-hardware agentic upgrade
+
+The confirmed demo/dev hardware is an **iQOO flagship phone — 16GB RAM, Snapdragon-class NPU, 512GB
+storage** — not the generic loaner device the original 1B-model budget was conservatively sized for.
+See RESEARCH.md § "Expansion: flagship-hardware agentic upgrade" for the full evidence chain. The short
+version, since it changes the architecture and stack below:
+- **On-device SLM upgrades from Gemma 3 1B to Qwen3-4B** (primary), with Qwen3-8B as a measured upgrade
+  path only if Day-1 device testing on the actual iQOO flagship confirms headroom, and Gemma 3 4B as
+  the GGUF-integration-path alternate. This is a real change to §2/§4, not just an addition.
+- **The Tier 1 rule-based classifier and the no-cross-source-fusion rule both stay exactly as they
+  were.** Neither was a hardware-limited decision (RESEARCH.md § same section explains why) — better
+  hardware doesn't change either conclusion.
+- **"Autonomous orchestration" is scoped narrowly and deliberately: masked, code-governed tool
+  selection at specific decision points, never a free-form multi-step agent loop.** The evidence against
+  open-ended multi-step tool orchestration is unusually consistent across model sizes, including
+  frontier cloud models (RESEARCH.md § same section) — the concrete change is that `GoalContext`
+  retrieval (§4.5) becomes a model-selected subset of sources instead of always querying all of them,
+  bounded by a masked candidate set, schema validation, and a hard call cap. Everything else in the
+  core state machine (`Orchestrator`, `FeedbackLoop`, `GamificationEngine`) stays deterministic,
+  code-governed control flow.
+
 ## 1. Architecture
 
 ```
@@ -144,15 +165,19 @@ version, since it changes the architecture below:
        │ structured JSON snapshot         │ trigger
        ▼                                  ▼
 ┌───────────────────┐          ┌──────────────────────────────┐
-│ SlmExplainer        │          │ FocusOverlay (full-screen     │
-│ Gemma 3 1B GGUF      │          │ intent activity)               │
-│ via llama.cpp JNI     │───────▶│ muted UI, 3 essential apps,   │
-│ → one sentence        │  text   │ explanation text + TTS voice  │
+│ SlmExplainer         │          │ FocusOverlay (full-screen     │
+│ Qwen3-4B GGUF (§0.4)  │          │ intent activity)               │
+│ via llama.cpp JNI      │───────▶│ muted UI, 3 essential apps,   │
+│ → masked source pick   │  text   │ explanation text + TTS voice  │
+│ + one-sentence explain │         │                                 │
 └─────────┬─────────┘          └───────────────┬──────────────────┘
           ▲
-          │ flat context bullets (no fusion — see §0.1)
+          │ flat bullets from only the sources the model picked
+          │ (masked choice among ≤5 sources — still no fusion, §0.1/§0.4)
 ┌─────────┴─────────────────────────────────────────────────────┐
-│  GoalContext (retrieval-per-source, combined only at prompt time)│
+│  GoalContext (retrieval-per-source, model-selected subset,       │
+│  combined only at prompt time — masking + schema validation +    │
+│  call cap per §4.5/§4.8, never a free multi-step agent loop)     │
 │  ├─ Notes: EmbeddingGemma-300M, on-device cosine top-k            │
 │  ├─ Todos / HealthTargets: Room, direct field filter (no embed)  │
 │  └─ Calendar (opt-in, OAuth): time-range filter (no embed)        │
@@ -204,8 +229,9 @@ RESEARCH.md § "Decision justification" — this table is the summary.
 | Signal collection | `UsageStatsManager`, `NotificationListenerService`, `ACTION_USER_PRESENT` broadcast | All native Android, metadata-only, no special hardware |
 | Baseline storage | Room (SQLite) | Local-only, no sync, trivial to demo-reset between runs |
 | Classifier | Rule-based Welford z-score, hand-tuned thresholds | O(log n) vs O(n) sample-complexity theory (arXiv:2302.02334) + a direct empirical analog hitting precision=1.00/recall=1.00 at 14-day data scale (arXiv:2604.08581) both favor rule-based at this project's data volume — not just a time-budget shortcut |
-| On-device SLM | **Gemma 3 1B IT, Google's QAT Q4_0 GGUF (~1GB)**, via llama.cpp JNI | 1GB file, 32K ctx, HellaSwag 62.3/PIQA 73.8/ARC-e 73.0 — best verified param/quality/quant fit at this budget. No published QAT-vs-bf16 quality delta though (model card is qualitative only) — see RESEARCH.md §Decision justification |
-| SLM harness | Fork **PhoneLM's Android demo app** (github.com/UbiquitousLearning/PhoneLM) for the JNI/GGUF-loading plumbing, swap in the Gemma weights | Only source found with a *working* Android llama.cpp harness — don't build this from scratch |
+| On-device SLM | **Qwen3-4B, Q4 GGUF** (primary); **Qwen3-8B** upgrade path if Day-1 flagship testing confirms headroom; **Gemma 3 4B** GGUF-path alternate | Sits in the size band real-device measurement confirms actually runs on mobile today (arXiv:2504.00002); real evidence of agentic/tool-use capability at 4B (MidTool, ToolRM); 8B has the strongest accuracy number (UniToolCall 93.0% precision) but unverified peak RAM alongside embedder+vision — see RESEARCH.md §Expansion: flagship-hardware agentic upgrade. Supersedes the original Gemma 3 1B pick, which was sized for a generic loaner device, not this confirmed flagship |
+| SLM harness | Fork **PhoneLM's Android demo app** (github.com/UbiquitousLearning/PhoneLM) for the JNI/GGUF-loading plumbing, swap in the Qwen3-4B weights | Only source found with a *working* Android llama.cpp harness — don't build this from scratch. Harness itself doesn't change with the model swap, only the loaded weights and prompt/tool-schema handling |
+| Agentic tool selection | Masked, code-governed selection at defined decision points (chiefly GoalContext source retrieval, §4.5/§4.8) — **not** a free-form multi-step agent loop | Every positive small-model tool-calling result found requires a masked/retrieval-narrowed candidate set (Octopus, Hammer, DroidCall, TinyAgent); every raw multi-step orchestration number found is weak even for frontier cloud models (HyperTool, Evoflux, TOBench) — see RESEARCH.md §Expansion: flagship-hardware agentic upgrade |
 | Voice output | Android `TextToSpeech` (offline engine) | Zero extra permission, covers HackTracker's "voice" line without touching the mic |
 | Overlay UI | `USE_FULL_SCREEN_INTENT` activity (MVP) → `SYSTEM_ALERT_WINDOW` overlay (stretch) | Full-screen intent is far lower permission-risk for a live demo; upgrade only if time remains |
 | Dev bridge | Office Kit, paired for the whole build | Screen mirror for on-device debugging, file transfer for pulling logs off the loaner phone — scored on real usage, use it don't fake it |
@@ -221,10 +247,10 @@ RESEARCH.md § "Decision justification" — this table is the summary.
 
 **Path not taken:** MediaPipe/Google AI Edge's LLM Inference API was considered as a higher-level
 alternative to raw llama.cpp JNI, but this survey did not verify its GGUF compatibility or confirm
-a working example against Gemma 3 1B specifically (coverage gap — MLC-LLM/ExecuTorch returned no
-arXiv/HF-Papers hits at all). Treat it as a half-day spike early in the backend-native workstream, not
-the default: if the PhoneLM-fork + llama.cpp path is compiling and loading a model within Sprint 0's
-first days, stop evaluating alternatives and commit.
+a working example against Gemma-family or Qwen3 models specifically (coverage gap — MLC-LLM/ExecuTorch
+returned no arXiv/HF-Papers hits at all). Treat it as a half-day spike early in the backend-native
+workstream, not the default: if the PhoneLM-fork + llama.cpp path is compiling and loading Qwen3-4B
+within Sprint 0's first days, stop evaluating alternatives and commit.
 
 ---
 
@@ -278,18 +304,25 @@ Owns everything that talks to the OS or runs an on-device model via native infer
 - `NotifLatencyTracker`: `NotificationListenerService`, log `onNotificationPosted` timestamp vs. the
   next unlock or `onNotificationRemoved` — **metadata only, never read notification text/content.**
 - SLM harness: fork PhoneLM's Android demo (github.com/UbiquitousLearning/PhoneLM), get it compiling
-  and running its own default model on-device, then swap in
-  `google/gemma-3-1b-it-qat-q4_0-gguf` and measure cold-load time + tokens/sec on the actual loaner
-  phone's Snapdragon SoC. **This number does not exist in any paper — this is the first data point.**
-  Fall back to `Qwen2.5-0.5B-Instruct-GGUF` if it's too slow.
-  **Spend real time on the few-shot prompt (§4.3), not just model loading** — Time2Stop
-  (arXiv:2403.05584) measured +53.8%/+11.4% receptivity gain from adding explanations, so the
+  and running its own default model on-device, then swap in a **Qwen3-4B Q4 GGUF** and measure
+  cold-load time + tokens/sec on the actual **iQOO flagship's** Snapdragon NPU. **This number does not
+  exist in any paper for a phone-class Snapdragon NPU at this size — this is the first data point**
+  (RESEARCH.md §Expansion: flagship-hardware agentic upgrade). If headroom is genuinely better than
+  expected, try Qwen3-8B as the measured upgrade; if the Qwen3 GGUF/tool-calling path is harder to
+  integrate than expected, fall back to Gemma 3 4B to stay in-family with the existing harness.
+  **Spend real time on the few-shot prompt and tool-call schema (§4.3/§4.8), not just model loading** —
+  Time2Stop (arXiv:2403.05584) measured +53.8%/+11.4% receptivity gain from adding explanations, so the
   explanation's quality is plausibly the highest-leverage thing in the whole build.
 - **Capture pipeline native bridge:** EdgeSAM (scribble → mask/crop), DocScanner (dewarp,
   photo-captures only), PP-OCRv5/6 (OCR) — same class of work as the SLM harness (load a small
   on-device model, expose it over a JNI/platform-channel boundary), so it sits with the same owner.
-  Measure latency for each stage on the loaner device — none of these have published Android numbers
+  Measure latency for each stage on the flagship device — none of these have published Android numbers
   (RESEARCH.md §Expansion, gamified capture).
+- **Concurrent-model memory/latency testing:** once the SLM, embedder, and capture pipeline each work in
+  isolation, test them **resident together** — peak RSS and latency under concurrent load, not just each
+  model's own footprint. No paper validates this combination on phone hardware (RESEARCH.md §Expansion:
+  flagship-hardware agentic upgrade) — the ~4-6GB combined estimate against 16GB available is a
+  hypothesis to verify, not an assumption to build on unverified.
 - Wire `TextToSpeech` (offline engine) to speak explanations.
 - Permission plumbing: usage access, notification access, full-screen intent, camera — manual-grant
   flows per §5.
@@ -315,7 +348,10 @@ Owns deterministic logic and local storage — testable without any UI or native
   RESEARCH.md's Protégé-effect null-result caution. Code skeleton in §4.4.
 - `GoalContext` retrieval: notes via EmbeddingGemma-300M cosine top-k, todos/health-targets/calendar
   via direct Room query, combined only as flat prompt bullets — never joint fusion (RESEARCH.md
-  §Expansion: goal-context layer). Code skeleton in §4.5.
+  §Expansion: goal-context layer). **Which sources get queried is now the model's masked choice**
+  (≤5 known sources, schema-validated, hard call cap), not a fixed always-query-all list — the
+  agentic upgrade, scoped exactly per RESEARCH.md §Expansion: flagship-hardware agentic upgrade.
+  Code skeletons in §4.5 (retrieval) and §4.8 (masked tool selection).
 - **`CapturedItem` parsing:** maps backend-native's OCR output into a structured Note/Todo/
   HealthTarget candidate, handles dedup/merge against existing entries, persists to Room, and feeds
   `GoalContext` like any other entry. Code skeleton in §4.6.
@@ -594,6 +630,47 @@ actual checklist item before the app is considered demo-ready, not a suggestion:
 4. Run this checklist against the actual shipped copy/UI, not the design doc — the review in §3's
    "Day 6-7" final hours is where this happens for real, not a Sprint-0-only formality.
 
+### 4.8 Masked tool selection — the "autonomous orchestration" decision point
+
+This is the concrete implementation of §0.4's design rule: the model gets genuine autonomy over *what
+it queries*, bounded by masking, schema validation, and a hard call cap — never a free-form loop that
+plans its own sequence or decides when to stop. See RESEARCH.md §Expansion: flagship-hardware agentic
+upgrade for why this specific boundary, not a looser one, is what the evidence supports.
+
+```kotlin
+/** The only five choices the model is ever offered at this decision point — a closed enum, not an
+ *  open tool name the model generates freely. Function masking (RESEARCH.md: Octopus, Hammer) is
+ *  what makes small-model tool selection reliable; an open vocabulary is exactly what the
+ *  multi-step-orchestration failure numbers (HyperTool, Evoflux, TOBench) were measured on. */
+enum class GoalContextSource { NOTES, TODOS, HEALTH_TARGETS, CALENDAR, CAPTURE_HISTORY }
+
+data class SourceSelection(val sources: List<GoalContextSource>, val reasoning: String)
+
+class MaskedSourceSelector(private val slm: SlmExplainer, private val maxCalls: Int = 3) {
+    /** One masked, schema-validated decision — not a loop the model controls. `slm.selectSources`
+     *  is constrained-decoded against the GoalContextSource enum (grammar/JSON-schema constrained
+     *  generation, per RESEARCH.md's "Small Language Models for Agentic Systems" survey finding on
+     *  guided decoding) so an invalid/hallucinated source name cannot come back at all. */
+    fun select(triggerSignal: String, topSignal: String): SourceSelection {
+        val raw = slm.selectSources(triggerSignal, topSignal, allowed = GoalContextSource.entries)
+        val validated = raw.sources.filter { it in GoalContextSource.entries }  // defense in depth
+        if (validated.isEmpty() || validated.size > maxCalls) {
+            // Cap hit or empty/malformed response: fall back to the old fixed behavior, don't retry
+            // indefinitely — this is the guard against the documented "infinite agentic loop" failure
+            // mode (RESEARCH.md: arXiv:2607.01641), not a bug to silently ignore.
+            return SourceSelection(GoalContextSource.entries, reasoning = "fallback: query all sources")
+        }
+        return SourceSelection(validated, raw.reasoning)
+    }
+}
+```
+
+`GoalContext.retrieve()` (§4.5) takes the resulting `SourceSelection` and only queries those sources —
+everything downstream of this call (the flat-bullet concatenation, the single-sentence explanation
+prompt) is unchanged from §4.5/§4.3. The model never decides to call this selector again, never decides
+the loop is "not done yet," and never invokes a tool outside this fixed five-option menu — that
+boundary is the whole design, not an implementation detail to loosen once it's working.
+
 ---
 
 ## 5. Permissions checklist (pre-grant on the demo device — do this before you're on stage)
@@ -629,7 +706,10 @@ calendar only adds context" narration literally true rather than a talking point
 3. **(1:15-2:00)** Trigger an overload state live (either genuinely by rapid app-switching on stage,
    or a debug "simulate overload" button if live triggering is too slow/unreliable) — overlay swipes
    in, SLM sentence appears grounded in a real todo/health target (goal-context, still airplane-mode,
-   no calendar needed), spoken via TTS.
+   no calendar needed), spoken via TTS. If the transparency panel shows the model's masked source
+   choice (§4.8 — e.g. "checked: todos, health targets · skipped: calendar, notes"), point at it
+   explicitly: "the model decides what to check, but only from a fixed, validated list — it can't go
+   off and do something we didn't authorize."
 4. **(2:00-2:45)** Photograph a printed schedule on stage, circle one item with a finger (freeform
    capture, still airplane-mode — the vision pipeline is on-device), watch it get cropped/rectified/
    OCR'd, confirm it on the review screen as a new todo — then show the XP award and streak/level tick
@@ -699,18 +779,23 @@ In priority order — stop at whichever you reach when battle time runs out:
 ## 8. Open risks carried over from RESEARCH.md
 
 See RESEARCH.md §"Open questions / risks" for the full list — the most time-sensitive are:
-**(a)** no literature-verified Snapdragon inference latency for Gemma 3 1B GGUF (Sprint-0-era spike is
-the first real measurement); **(b)** no literature-backed threshold for app-switching/fragmentation
-signals (expect hand-tuning against real usage, isolated in one easily-editable config so late
-calibration doesn't risk breaking anything else); **(c)** running multiple on-device models
-simultaneously (SLM generator + embedder + capture-pipeline's segmentation/dewarp/OCR stack) is
-untested on the loaner device — backend-native should check combined memory pressure early, not only
-per-model latency in isolation; **(d)** resist the temptation to make the SLM reason jointly across
-notes/todos/calendar/health in one prompt — the literature says even frontier models do this badly
-(34.5% pass@1), keep retrieval-per-source and flat concatenation only (§4.5); **(e)** no paper does
-freeform-scribble-to-clean-crop plus document rectification as one studied task, so the capture
-pipeline (§4.6) is first-party integration work between two separately-sourced models, not a single
-proven recipe — budget real testing time for the composed pipeline, not just each model in isolation;
-and **(f)** gamification is in real, evidence-backed tension with the app's own anti-overload mission
-— the non-losable-streak design rule and the pre-ship self-audit (§4.7) are the mitigation, and skipping
-that audit under time pressure during the battle is the most likely way this risk actually materializes.
+**(a)** no literature-verified phone-class Snapdragon NPU inference latency for a 4-8B agentic model
+(Sprint-0-era spike is the first real measurement — see §0.4/§2); **(b)** no literature-backed threshold
+for app-switching/fragmentation signals (expect hand-tuning against real usage, isolated in one
+easily-editable config so late calibration doesn't risk breaking anything else); **(c)** running
+multiple on-device models simultaneously (SLM generator + embedder + capture-pipeline's
+segmentation/dewarp/OCR stack) is untested on phone hardware even though the ~4-6GB combined RAM
+estimate looks comfortable against the confirmed 16GB flagship — backend-native should check combined
+memory pressure AND concurrent-load latency early (RESEARCH.md flags memory *bandwidth*, not just
+capacity, as a distinct real risk), not only per-model latency in isolation; **(d)** resist the
+temptation to make the SLM reason jointly across notes/todos/calendar/health in one prompt, or to let it
+freely plan multi-step tool sequences beyond the masked §4.8 selection point — the literature says even
+frontier models do both of these badly (34.5% pass@1 on fusion, 32-36% on multi-step orchestration),
+keep retrieval-per-source, flat concatenation, and masked/capped tool selection only (§4.5/§4.8);
+**(e)** no paper does freeform-scribble-to-clean-crop plus document rectification as one studied task,
+so the capture pipeline (§4.6) is first-party integration work between two separately-sourced models,
+not a single proven recipe — budget real testing time for the composed pipeline, not just each model in
+isolation; and **(f)** gamification is in real, evidence-backed tension with the app's own anti-overload
+mission — the non-losable-streak design rule and the pre-ship self-audit (§4.7) are the mitigation, and
+skipping that audit under time pressure during the battle is the most likely way this risk actually
+materializes.
