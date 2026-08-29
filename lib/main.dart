@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'core/services/app_switch_signal_service.dart';
+import 'core/services/notif_latency_signal_service.dart';
 import 'core/services/signal_collection_status_service.dart';
 import 'core/services/unlock_signal_service.dart';
 
@@ -32,13 +33,16 @@ class SignalTrackerDebugScreen extends StatefulWidget {
     super.key,
     UnlockSignalService? unlockService,
     AppSwitchSignalService? appSwitchService,
+    NotifLatencySignalService? notifService,
     SignalCollectionStatusService? statusService,
   }) : unlockService = unlockService ?? UnlockSignalService(),
        appSwitchService = appSwitchService ?? AppSwitchSignalService(),
+       notifService = notifService ?? NotifLatencySignalService(),
        statusService = statusService ?? SignalCollectionStatusService();
 
   final UnlockSignalService unlockService;
   final AppSwitchSignalService appSwitchService;
+  final NotifLatencySignalService notifService;
   final SignalCollectionStatusService statusService;
 
   @override
@@ -52,6 +56,8 @@ class _SignalTrackerDebugScreenState extends State<SignalTrackerDebugScreen> {
   bool? _serviceRunning;
   bool? _hasUsageAccess;
   int _appSwitchesToday = 0;
+  bool? _hasNotificationAccess;
+  List<Duration> _notifLatenciesToday = const [];
   String? _error;
   bool _loading = false;
 
@@ -75,10 +81,17 @@ class _SignalTrackerDebugScreenState extends State<SignalTrackerDebugScreen> {
         startOfToday,
       );
       final serviceRunning = await widget.statusService.isRunning();
+
       final hasUsageAccess = await widget.appSwitchService.hasUsageAccess();
       final appSwitchesToday = hasUsageAccess
           ? await widget.appSwitchService.getAppSwitchCountSince(startOfToday)
           : 0;
+
+      final hasNotificationAccess = await widget.notifService
+          .hasNotificationAccess();
+      final notifLatenciesToday = hasNotificationAccess
+          ? await widget.notifService.getLatenciesSince(startOfToday)
+          : const <Duration>[];
 
       if (!mounted) return;
       setState(() {
@@ -87,6 +100,8 @@ class _SignalTrackerDebugScreenState extends State<SignalTrackerDebugScreen> {
         _serviceRunning = serviceRunning;
         _hasUsageAccess = hasUsageAccess;
         _appSwitchesToday = appSwitchesToday;
+        _hasNotificationAccess = hasNotificationAccess;
+        _notifLatenciesToday = notifLatenciesToday;
       });
     } catch (e) {
       if (!mounted) return;
@@ -163,6 +178,39 @@ class _SignalTrackerDebugScreenState extends State<SignalTrackerDebugScreen> {
             ],
             const SizedBox(height: 8),
             Text('App switches today: $_appSwitchesToday', style: boldStyle),
+            const Divider(height: 32),
+            Text(
+              'NotifLatencyTracker',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Let a notification arrive, then dismiss it or unlock your phone, then refresh.',
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _hasNotificationAccess == null
+                  ? 'Notification access: checking...'
+                  : 'Notification access: ${_hasNotificationAccess! ? 'granted' : 'NOT granted'}',
+              style: boldStyle.copyWith(
+                color: _hasNotificationAccess == false ? Colors.red : null,
+              ),
+            ),
+            if (_hasNotificationAccess == false) ...[
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: () =>
+                    widget.notifService.openNotificationAccessSettings(),
+                child: const Text('Grant notification access'),
+              ),
+            ],
+            const SizedBox(height: 8),
+            Text(
+              'Notification latencies today: ${_notifLatenciesToday.length}',
+              style: boldStyle,
+            ),
+            for (final d in _notifLatenciesToday.take(20))
+              Text('${d.inSeconds}s'),
           ],
         ),
       ),

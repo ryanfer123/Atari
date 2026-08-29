@@ -63,6 +63,18 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
             </intent-filter>
         </receiver>
+
+        <!-- NotifLatencyTracker. Special-access permission — manual grant
+             only via Settings, no requestPermissions() dialog exists for
+             it. See Plans/IMPLEMENTATION.md §5. -->
+        <service
+            android:name=".AtariNotificationListenerService"
+            android:exported="true"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService"/>
+            </intent-filter>
+        </service>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

@@ -3,6 +3,7 @@ package com.atari.atari
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -62,6 +63,22 @@ class MainActivity : FlutterActivity() {
                     }
                     "openUsageAccessSettings" -> {
                         startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                        result.success(null)
+                    }
+                    "hasNotificationAccess" -> {
+                        val enabled = NotificationManagerCompat.getEnabledListenerPackages(applicationContext)
+                        result.success(enabled.contains(applicationContext.packageName))
+                    }
+                    "getNotifLatenciesSince" -> {
+                        val sinceMillis = (call.argument<Number>("sinceMillis"))?.toLong()
+                        if (sinceMillis == null) {
+                            result.error("missing_argument", "sinceMillis is required", null)
+                        } else {
+                            result.success(NotifLatencyTracker.getLatenciesSince(applicationContext, sinceMillis))
+                        }
+                    }
+                    "openNotificationAccessSettings" -> {
+                        startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
                         result.success(null)
                     }
                     else -> result.notImplemented()
