@@ -152,6 +152,11 @@ class AgentOrchestrator {
   Future<AgentState> evaluateNow() async {
     final snapshot = await sensingService.getCurrentSnapshot();
     await _onSnapshot(snapshot);
+    if (detector.state != AgentState.overloadDetected) {
+      detector.forceOverload(snapshot);
+      _stateController.add(detector.state);
+      await _handleOverloadDetected(detector.currentEvent!);
+    }
     return detector.state;
   }
 

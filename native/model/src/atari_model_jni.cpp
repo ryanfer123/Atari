@@ -39,31 +39,34 @@ Java_com_atari_slm_SlmBridge_nativeBuildPrompt(
     jstring time_bucket,
     jobjectArray context_sources,
     jobjectArray context_texts) {
+    try {
+        BehavioralEvidence evidence;
+        evidence.fragmentation_score = fragmentation_score;
+        if (app_switch_z > -999.0) evidence.app_switch_z_score = app_switch_z;
+        if (unlock_z > -999.0) evidence.unlock_z_score = unlock_z;
+        if (notif_z > -999.0) evidence.notification_z_score = notif_z;
+        evidence.time_bucket = jstring_to_string(env, time_bucket);
 
-    BehavioralEvidence evidence;
-    evidence.fragmentation_score = fragmentation_score;
-    if (app_switch_z > -999.0) evidence.app_switch_z_score = app_switch_z;
-    if (unlock_z > -999.0) evidence.unlock_z_score = unlock_z;
-    if (notif_z > -999.0) evidence.notification_z_score = notif_z;
-    evidence.time_bucket = jstring_to_string(env, time_bucket);
-
-    if (context_sources && context_texts) {
-        jsize len = env->GetArrayLength(context_sources);
-        for (jsize i = 0; i < len; ++i) {
-            auto src = static_cast<jstring>(env->GetObjectArrayElement(context_sources, i));
-            auto txt = static_cast<jstring>(env->GetObjectArrayElement(context_texts, i));
-            evidence.context_bullets.push_back({
-                jstring_to_string(env, src),
-                jstring_to_string(env, txt)
-            });
-            if (src) env->DeleteLocalRef(src);
-            if (txt) env->DeleteLocalRef(txt);
+        if (context_sources && context_texts) {
+            jsize len = env->GetArrayLength(context_sources);
+            for (jsize i = 0; i < len; ++i) {
+                auto src = static_cast<jstring>(env->GetObjectArrayElement(context_sources, i));
+                auto txt = static_cast<jstring>(env->GetObjectArrayElement(context_texts, i));
+                evidence.context_bullets.push_back({
+                    jstring_to_string(env, src),
+                    jstring_to_string(env, txt)
+                });
+                if (src) env->DeleteLocalRef(src);
+                if (txt) env->DeleteLocalRef(txt);
+            }
         }
-    }
 
-    Prompt p = ExplanationService::build_prompt(evidence);
-    std::string combined = p.system + "\n---\n" + p.user;
-    return string_to_jstring(env, combined);
+        Prompt p = ExplanationService::build_prompt(evidence);
+        std::string combined = p.system + "\n---\n" + p.user;
+        return string_to_jstring(env, combined);
+    } catch (...) {
+        return string_to_jstring(env, "");
+    }
 }
 
 JNIEXPORT jstring JNICALL
@@ -76,15 +79,19 @@ Java_com_atari_slm_SlmBridge_nativeFallbackText(
     jdouble notif_z,
     jstring time_bucket) {
 
-    BehavioralEvidence evidence;
-    evidence.fragmentation_score = fragmentation_score;
-    if (app_switch_z > -999.0) evidence.app_switch_z_score = app_switch_z;
-    if (unlock_z > -999.0) evidence.unlock_z_score = unlock_z;
-    if (notif_z > -999.0) evidence.notification_z_score = notif_z;
-    evidence.time_bucket = jstring_to_string(env, time_bucket);
+    try {
+        BehavioralEvidence evidence;
+        evidence.fragmentation_score = fragmentation_score;
+        if (app_switch_z > -999.0) evidence.app_switch_z_score = app_switch_z;
+        if (unlock_z > -999.0) evidence.unlock_z_score = unlock_z;
+        if (notif_z > -999.0) evidence.notification_z_score = notif_z;
+        evidence.time_bucket = jstring_to_string(env, time_bucket);
 
-    std::string fallback = ExplanationService::fallback_text(evidence);
-    return string_to_jstring(env, fallback);
+        std::string fallback = ExplanationService::fallback_text(evidence);
+        return string_to_jstring(env, fallback);
+    } catch (...) {
+        return string_to_jstring(env, "Your phone activity differs from your personal baseline.");
+    }
 }
 
 JNIEXPORT jboolean JNICALL
@@ -93,8 +100,12 @@ Java_com_atari_slm_SlmBridge_nativeIsSafeOutput(
     jclass /*clazz*/,
     jstring output) {
 
-    std::string text = jstring_to_string(env, output);
-    return ExplanationService::is_safe_output(text) ? JNI_TRUE : JNI_FALSE;
+    try {
+        std::string text = jstring_to_string(env, output);
+        return ExplanationService::is_safe_output(text) ? JNI_TRUE : JNI_FALSE;
+    } catch (...) {
+        return JNI_FALSE;
+    }
 }
 
 JNIEXPORT jstring JNICALL
@@ -106,21 +117,37 @@ Java_com_atari_slm_SlmBridge_nativeSourceSelectionSchema(
     jintArray allowed_source_ids,
     jint max_sources) {
 
-    SourceSelectionRequest req;
-    req.trigger_signal = jstring_to_string(env, trigger_signal);
-    req.top_signal = jstring_to_string(env, top_signal);
+    try {
+        SourceSelectionRequest req;
+        req.trigger_signal = jstring_to_string(env, trigger_signal);
+        if (req.trigger_signal.empty()) req.trigger_signal = "app_switches";
+        req.top_signal = jstring_to_string(env, top_signal);
+        if (req.top_signal.empty()) req.top_signal = "app_switches";
 
-    if (allowed_source_ids) {
-        jsize len = env->GetArrayLength(allowed_source_ids);
-        jint* ids = env->GetIntArrayElements(allowed_source_ids, nullptr);
-        for (jsize i = 0; i < len; ++i) {
-            req.allowed_sources.push_back(static_cast<GoalContextSource>(ids[i]));
+        if (allowed_source_ids && env->GetArrayLength(allowed_source_ids) > 0) {
+            jsize len = env->GetArrayLength(allowed_source_ids);
+            jint* ids = env->GetIntArrayElements(allowed_source_ids, nullptr);
+            for (jsize i = 0; i < len && i < 5; ++i) {
+                req.allowed_sources.push_back(static_cast<GoalContextSource>(ids[i]));
+            }
+            env->ReleaseIntArrayElements(allowed_source_ids, ids, JNI_ABORT);
+        } else {
+            req.allowed_sources = {
+                GoalContextSource::kNotes,
+                GoalContextSource::kTodos,
+                GoalContextSource::kHealthTargets,
+                GoalContextSource::kCalendar,
+                GoalContextSource::kCaptureHistory
+            };
         }
-        env->ReleaseIntArrayElements(allowed_source_ids, ids, JNI_ABORT);
-    }
 
-    std::string schema = SourceSelectionService::response_json_schema(req, static_cast<std::size_t>(max_sources));
-    return string_to_jstring(env, schema);
+        std::size_t capped_max = std::max<std::size_t>(1, std::min<std::size_t>(5, static_cast<std::size_t>(max_sources)));
+        Prompt p = SourceSelectionService::build_prompt(req, capped_max);
+        std::string combined = p.system + "\n---\n" + p.user;
+        return string_to_jstring(env, combined);
+    } catch (...) {
+        return string_to_jstring(env, "");
+    }
 }
 
 JNIEXPORT jintArray JNICALL
@@ -128,20 +155,23 @@ Java_com_atari_slm_SlmBridge_nativeParseSourceSelection(
     JNIEnv* env,
     jclass /*clazz*/,
     jstring json_response) {
+    try {
+        std::string resp = jstring_to_string(env, json_response);
+        std::vector<GoalContextSource> sources = SourceSelectionService::parse_response(resp);
 
-    std::string resp = jstring_to_string(env, json_response);
-    std::vector<GoalContextSource> sources = SourceSelectionService::parse_response(resp);
-
-    jintArray result = env->NewIntArray(static_cast<jsize>(sources.size()));
-    if (result && !sources.empty()) {
-        std::vector<jint> int_ids;
-        int_ids.reserve(sources.size());
-        for (auto s : sources) {
-            int_ids.push_back(static_cast<jint>(s));
+        jintArray result = env->NewIntArray(static_cast<jsize>(sources.size()));
+        if (result && !sources.empty()) {
+            std::vector<jint> int_ids;
+            int_ids.reserve(sources.size());
+            for (auto s : sources) {
+                int_ids.push_back(static_cast<jint>(s));
+            }
+            env->SetIntArrayRegion(result, 0, static_cast<jsize>(int_ids.size()), int_ids.data());
         }
-        env->SetIntArrayRegion(result, 0, static_cast<jsize>(int_ids.size()), int_ids.data());
+        return result;
+    } catch (...) {
+        return nullptr;
     }
-    return result;
 }
 
 }  // extern "C"

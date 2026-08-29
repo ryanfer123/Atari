@@ -42,17 +42,18 @@ class TtsPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, TextToSpeech.O
                 val result = engine.setLanguage(Locale.US)
                 if (result != TextToSpeech.LANG_MISSING_DATA && result != TextToSpeech.LANG_NOT_SUPPORTED) {
                     isTtsReady = true
+                    val handler = android.os.Handler(android.os.Looper.getMainLooper())
                     engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                         override fun onStart(utteranceId: String?) {
-                            methodChannel.invokeMethod("onSpeechStart", utteranceId)
+                            handler.post { methodChannel.invokeMethod("onSpeechStart", utteranceId) }
                         }
 
                         override fun onDone(utteranceId: String?) {
-                            methodChannel.invokeMethod("onSpeechDone", utteranceId)
+                            handler.post { methodChannel.invokeMethod("onSpeechDone", utteranceId) }
                         }
 
                         override fun onError(utteranceId: String?) {
-                            methodChannel.invokeMethod("onSpeechError", utteranceId)
+                            handler.post { methodChannel.invokeMethod("onSpeechError", utteranceId) }
                         }
                     })
                 }

@@ -86,10 +86,14 @@ class GoalContextRetriever {
     int maxCalls = 3,
     int maxBulletsPerSource = 3,
   }) async {
+    final nonEmpty = _nonEmptySources();
+    final sourcesToQuery = (allowedSources != null && allowedSources.isNotEmpty)
+        ? allowedSources
+        : (nonEmpty.isNotEmpty ? nonEmpty : GoalContextSource.values);
     final selection = await slmService.selectSources(
       triggerSignal: triggerSignal,
       topSignal: topSignal,
-      allowedSources: allowedSources ?? _nonEmptySources(),
+      allowedSources: sourcesToQuery,
       maxCalls: maxCalls,
     );
     return retrieve(selection.sources, maxBulletsPerSource: maxBulletsPerSource);

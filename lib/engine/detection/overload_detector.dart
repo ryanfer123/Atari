@@ -121,6 +121,17 @@ class OverloadDetector {
     _lastTransition = null;
   }
 
+  /// Force an overload state for manual evaluation/testing.
+  void forceOverload(SignalSnapshot snapshot) {
+    _transition(AgentState.overloadDetected);
+    _currentEvent = OverloadEvent(
+      timestamp: DateTime.now(),
+      signalScores: const {'app_switches': 9.9},
+      severity: 9.9,
+      topSignal: 'app_switches',
+    );
+  }
+
   double _compositeSeverity(Map<String, double> scores) {
     var severity = 0.0;
     for (final entry in scores.entries) {

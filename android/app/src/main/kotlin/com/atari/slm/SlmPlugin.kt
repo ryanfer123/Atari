@@ -25,6 +25,8 @@ class SlmPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
 
     private var runtimeInitialized = false
     private var modelReady = false
+    private val executor = java.util.concurrent.Executors.newSingleThreadExecutor()
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         context = binding.applicationContext
@@ -34,24 +36,33 @@ class SlmPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         methodChannel.setMethodCallHandler(null)
+        executor.shutdown()
     }
 
     @Suppress("UNCHECKED_CAST")
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             "initRuntime" -> {
-                result.success(initRuntime())
+                executor.execute {
+                    val resp = initRuntime()
+                    mainHandler.post { result.success(resp) }
+                }
             }
 
             "loadModel" -> {
                 val modelPath = call.argument<String>("modelPath") ?: ""
                 val contextTokens = call.argument<Int>("contextTokens") ?: 1024
-                result.success(loadModel(modelPath, contextTokens))
+                executor.execute {
+                    val resp = loadModel(modelPath, contextTokens)
+                    mainHandler.post { result.success(resp) }
+                }
             }
 
             "unloadModel" -> {
-                unloadModel()
-                result.success(true)
+                executor.execute {
+                    unloadModel()
+                    mainHandler.post { result.success(true) }
+                }
             }
 
             "explain" -> {
@@ -65,11 +76,13 @@ class SlmPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
                 val contextSources = rawBullets.map { it["source"] ?: "" }.toTypedArray()
                 val contextTexts = rawBullets.map { it["text"] ?: "" }.toTypedArray()
 
-                val explanationResult = generateExplanation(
-                    fragmentationScore, appSwitchZ, unlockZ, notifZ, timeBucket,
-                    contextSources, contextTexts, rawBullets
-                )
-                result.success(explanationResult)
+                executor.execute {
+                    val explanationResult = generateExplanation(
+                        fragmentationScore, appSwitchZ, unlockZ, notifZ, timeBucket,
+                        contextSources, contextTexts, rawBullets
+                    )
+                    mainHandler.post { result.success(explanationResult) }
+                }
             }
 
             "selectSources" -> {
@@ -80,8 +93,10 @@ class SlmPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
                 )
                 val maxCalls = call.argument<Int>("maxCalls") ?: 3
 
-                val response = selectSources(triggerSignal, topSignal, allowed, maxCalls)
-                result.success(response)
+                executor.execute {
+                    val response = selectSources(triggerSignal, topSignal, allowed, maxCalls)
+                    mainHandler.post { result.success(response) }
+                }
             }
 
             "isModelReady" -> {
@@ -89,8 +104,10 @@ class SlmPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
             }
 
             "getRuntimeStatus" -> {
-                val metrics = getRuntimeMetrics()
-                result.success(metrics)
+                executor.execute {
+                    val metrics = getRuntimeMetrics()
+                    mainHandler.post { result.success(metrics) }
+                }
             }
 
             else -> result.notImplemented()
@@ -182,8 +199,8 @@ class SlmPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
                     contextSources, contextTexts
                 )
 
-                // Generate via llama.cpp (bounded to 128 tokens for 1-sentence output).
-                val rawOutput = SlmBridge.nativeGenerate(prompt, 128)
+                // Generate via llama.cpp (bounded to 60 tokens for 1-sentence output).
+                val rawOutput = SlmBridge.nativeGenerate(prompt, 60)
 
                 // Validate output safety via C++ contract.
                 if (rawOutput.isNotEmpty() && SlmBridge.nativeIsSafeOutput(rawOutput)) {
@@ -207,7 +224,7 @@ class SlmPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
             SlmBridge.nativeFallbackText(
                 fragmentationScore, appSwitchZ, unlockZ, notifZ, timeBucket
             )
-        } catch (e: UnsatisfiedLinkError) {
+        } catch (e: Throwable) {
             generateKotlinFallback(appSwitchZ, unlockZ, notifZ, timeBucket)
         }
 
@@ -232,42 +249,48 @@ class SlmPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         allowedSources: List<String>,
         maxCalls: Int
     ): Map<String, Any> {
+        val effectiveSources = if (allowedSources.isEmpty()) listOf(
+            "notes", "todos", "health_targets", "calendar", "capture_history"
+        ) else allowedSources
+
         if (modelReady) {
             try {
                 // Build the constrained prompt / schema for source selection.
-                val allowedIds = allowedSources.mapNotNull { sourceNameToId(it) }.toIntArray()
+                val allowedIds = effectiveSources.mapNotNull { sourceNameToId(it) }.toIntArray()
                 val selectionPrompt = SlmBridge.nativeSourceSelectionSchema(
                     triggerSignal, topSignal, allowedIds, maxCalls
                 )
 
-                // Generate via llama.cpp.
-                val rawOutput = SlmBridge.nativeGenerate(selectionPrompt, 64)
+                if (selectionPrompt.isNotEmpty()) {
+                    // Generate via llama.cpp (bounded to 32 tokens).
+                    val rawOutput = SlmBridge.nativeGenerate(selectionPrompt, 32)
 
-                // Parse and validate the model's selection.
-                val selectedIds = SlmBridge.nativeParseSourceSelection(rawOutput)
-                if (selectedIds != null && selectedIds.isNotEmpty()) {
-                    val selected = selectedIds.toList()
-                        .mapNotNull { sourceIdToName(it) }
-                        .filter { it in allowedSources }
-                        .distinct()
-                        .take(maxCalls)
+                    // Parse and validate the model's selection.
+                    val selectedIds = SlmBridge.nativeParseSourceSelection(rawOutput)
+                    if (selectedIds != null && selectedIds.isNotEmpty()) {
+                        val selected = selectedIds.toList()
+                            .mapNotNull { sourceIdToName(it) }
+                            .filter { it in effectiveSources }
+                            .distinct()
+                            .take(maxCalls)
 
-                    if (selected.isNotEmpty()) {
-                        return mapOf(
-                            "selectedSources" to selected,
-                            "reasoning" to "Model-selected sources for $topSignal (cap: $maxCalls)",
-                            "usedModel" to true
-                        )
+                        if (selected.isNotEmpty()) {
+                            return mapOf(
+                                "selectedSources" to selected,
+                                "reasoning" to "Model-selected sources for $topSignal (cap: $maxCalls)",
+                                "usedModel" to true
+                            )
+                        }
                     }
                 }
                 Log.w(TAG, "Model source selection invalid, using heuristic")
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Log.w(TAG, "Model source selection failed, using heuristic", e)
             }
         }
 
         // Deterministic fallback.
-        val selectedSources = performHeuristicSourceSelection(triggerSignal, topSignal, allowedSources, maxCalls)
+        val selectedSources = performHeuristicSourceSelection(triggerSignal, topSignal, effectiveSources, maxCalls)
         return mapOf(
             "selectedSources" to selectedSources,
             "reasoning" to "Deterministic source heuristic for $topSignal (cap: $maxCalls); model ${if (modelReady) "output invalid" else "not loaded"}",

@@ -107,6 +107,7 @@ class SensingPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, EventChann
 
             "recordSimulatedUnlock" -> {
                 UnlockTracker.recordUnlock(context)
+                startPeriodicUpdates() // Force an immediate update
                 result.success(true)
             }
 
