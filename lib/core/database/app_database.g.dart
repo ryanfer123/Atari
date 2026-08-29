@@ -401,15 +401,322 @@ class SignalBucketsCompanion extends UpdateCompanion<SignalBucketRow> {
   }
 }
 
+class $GamificationEventsTable extends GamificationEvents
+    with TableInfo<$GamificationEventsTable, GamificationEventRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GamificationEventsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _triggerMeta = const VerificationMeta(
+    'trigger',
+  );
+  @override
+  late final GeneratedColumn<String> trigger = GeneratedColumn<String>(
+    'trigger',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _xpAwardedMeta = const VerificationMeta(
+    'xpAwarded',
+  );
+  @override
+  late final GeneratedColumn<int> xpAwarded = GeneratedColumn<int>(
+    'xp_awarded',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _timestampMeta = const VerificationMeta(
+    'timestamp',
+  );
+  @override
+  late final GeneratedColumn<DateTime> timestamp = GeneratedColumn<DateTime>(
+    'timestamp',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, trigger, xpAwarded, timestamp];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'gamification_events';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GamificationEventRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('trigger')) {
+      context.handle(
+        _triggerMeta,
+        trigger.isAcceptableOrUnknown(data['trigger']!, _triggerMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_triggerMeta);
+    }
+    if (data.containsKey('xp_awarded')) {
+      context.handle(
+        _xpAwardedMeta,
+        xpAwarded.isAcceptableOrUnknown(data['xp_awarded']!, _xpAwardedMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_xpAwardedMeta);
+    }
+    if (data.containsKey('timestamp')) {
+      context.handle(
+        _timestampMeta,
+        timestamp.isAcceptableOrUnknown(data['timestamp']!, _timestampMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_timestampMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  GamificationEventRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GamificationEventRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      trigger: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}trigger'],
+      )!,
+      xpAwarded: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}xp_awarded'],
+      )!,
+      timestamp: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}timestamp'],
+      )!,
+    );
+  }
+
+  @override
+  $GamificationEventsTable createAlias(String alias) {
+    return $GamificationEventsTable(attachedDatabase, alias);
+  }
+}
+
+class GamificationEventRow extends DataClass
+    implements Insertable<GamificationEventRow> {
+  final int id;
+  final String trigger;
+  final int xpAwarded;
+  final DateTime timestamp;
+  const GamificationEventRow({
+    required this.id,
+    required this.trigger,
+    required this.xpAwarded,
+    required this.timestamp,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['trigger'] = Variable<String>(trigger);
+    map['xp_awarded'] = Variable<int>(xpAwarded);
+    map['timestamp'] = Variable<DateTime>(timestamp);
+    return map;
+  }
+
+  GamificationEventsCompanion toCompanion(bool nullToAbsent) {
+    return GamificationEventsCompanion(
+      id: Value(id),
+      trigger: Value(trigger),
+      xpAwarded: Value(xpAwarded),
+      timestamp: Value(timestamp),
+    );
+  }
+
+  factory GamificationEventRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GamificationEventRow(
+      id: serializer.fromJson<int>(json['id']),
+      trigger: serializer.fromJson<String>(json['trigger']),
+      xpAwarded: serializer.fromJson<int>(json['xpAwarded']),
+      timestamp: serializer.fromJson<DateTime>(json['timestamp']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'trigger': serializer.toJson<String>(trigger),
+      'xpAwarded': serializer.toJson<int>(xpAwarded),
+      'timestamp': serializer.toJson<DateTime>(timestamp),
+    };
+  }
+
+  GamificationEventRow copyWith({
+    int? id,
+    String? trigger,
+    int? xpAwarded,
+    DateTime? timestamp,
+  }) => GamificationEventRow(
+    id: id ?? this.id,
+    trigger: trigger ?? this.trigger,
+    xpAwarded: xpAwarded ?? this.xpAwarded,
+    timestamp: timestamp ?? this.timestamp,
+  );
+  GamificationEventRow copyWithCompanion(GamificationEventsCompanion data) {
+    return GamificationEventRow(
+      id: data.id.present ? data.id.value : this.id,
+      trigger: data.trigger.present ? data.trigger.value : this.trigger,
+      xpAwarded: data.xpAwarded.present ? data.xpAwarded.value : this.xpAwarded,
+      timestamp: data.timestamp.present ? data.timestamp.value : this.timestamp,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GamificationEventRow(')
+          ..write('id: $id, ')
+          ..write('trigger: $trigger, ')
+          ..write('xpAwarded: $xpAwarded, ')
+          ..write('timestamp: $timestamp')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, trigger, xpAwarded, timestamp);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GamificationEventRow &&
+          other.id == this.id &&
+          other.trigger == this.trigger &&
+          other.xpAwarded == this.xpAwarded &&
+          other.timestamp == this.timestamp);
+}
+
+class GamificationEventsCompanion
+    extends UpdateCompanion<GamificationEventRow> {
+  final Value<int> id;
+  final Value<String> trigger;
+  final Value<int> xpAwarded;
+  final Value<DateTime> timestamp;
+  const GamificationEventsCompanion({
+    this.id = const Value.absent(),
+    this.trigger = const Value.absent(),
+    this.xpAwarded = const Value.absent(),
+    this.timestamp = const Value.absent(),
+  });
+  GamificationEventsCompanion.insert({
+    this.id = const Value.absent(),
+    required String trigger,
+    required int xpAwarded,
+    required DateTime timestamp,
+  }) : trigger = Value(trigger),
+       xpAwarded = Value(xpAwarded),
+       timestamp = Value(timestamp);
+  static Insertable<GamificationEventRow> custom({
+    Expression<int>? id,
+    Expression<String>? trigger,
+    Expression<int>? xpAwarded,
+    Expression<DateTime>? timestamp,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (trigger != null) 'trigger': trigger,
+      if (xpAwarded != null) 'xp_awarded': xpAwarded,
+      if (timestamp != null) 'timestamp': timestamp,
+    });
+  }
+
+  GamificationEventsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? trigger,
+    Value<int>? xpAwarded,
+    Value<DateTime>? timestamp,
+  }) {
+    return GamificationEventsCompanion(
+      id: id ?? this.id,
+      trigger: trigger ?? this.trigger,
+      xpAwarded: xpAwarded ?? this.xpAwarded,
+      timestamp: timestamp ?? this.timestamp,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (trigger.present) {
+      map['trigger'] = Variable<String>(trigger.value);
+    }
+    if (xpAwarded.present) {
+      map['xp_awarded'] = Variable<int>(xpAwarded.value);
+    }
+    if (timestamp.present) {
+      map['timestamp'] = Variable<DateTime>(timestamp.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GamificationEventsCompanion(')
+          ..write('id: $id, ')
+          ..write('trigger: $trigger, ')
+          ..write('xpAwarded: $xpAwarded, ')
+          ..write('timestamp: $timestamp')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $SignalBucketsTable signalBuckets = $SignalBucketsTable(this);
+  late final $GamificationEventsTable gamificationEvents =
+      $GamificationEventsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [signalBuckets];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+    signalBuckets,
+    gamificationEvents,
+  ];
 }
 
 typedef $$SignalBucketsTableCreateCompanionBuilder =
@@ -631,10 +938,200 @@ typedef $$SignalBucketsTableProcessedTableManager =
       SignalBucketRow,
       PrefetchHooks Function()
     >;
+typedef $$GamificationEventsTableCreateCompanionBuilder =
+    GamificationEventsCompanion Function({
+      Value<int> id,
+      required String trigger,
+      required int xpAwarded,
+      required DateTime timestamp,
+    });
+typedef $$GamificationEventsTableUpdateCompanionBuilder =
+    GamificationEventsCompanion Function({
+      Value<int> id,
+      Value<String> trigger,
+      Value<int> xpAwarded,
+      Value<DateTime> timestamp,
+    });
+
+class $$GamificationEventsTableFilterComposer
+    extends Composer<_$AppDatabase, $GamificationEventsTable> {
+  $$GamificationEventsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get trigger => $composableBuilder(
+    column: $table.trigger,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get xpAwarded => $composableBuilder(
+    column: $table.xpAwarded,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get timestamp => $composableBuilder(
+    column: $table.timestamp,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$GamificationEventsTableOrderingComposer
+    extends Composer<_$AppDatabase, $GamificationEventsTable> {
+  $$GamificationEventsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get trigger => $composableBuilder(
+    column: $table.trigger,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get xpAwarded => $composableBuilder(
+    column: $table.xpAwarded,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get timestamp => $composableBuilder(
+    column: $table.timestamp,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$GamificationEventsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $GamificationEventsTable> {
+  $$GamificationEventsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get trigger =>
+      $composableBuilder(column: $table.trigger, builder: (column) => column);
+
+  GeneratedColumn<int> get xpAwarded =>
+      $composableBuilder(column: $table.xpAwarded, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get timestamp =>
+      $composableBuilder(column: $table.timestamp, builder: (column) => column);
+}
+
+class $$GamificationEventsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $GamificationEventsTable,
+          GamificationEventRow,
+          $$GamificationEventsTableFilterComposer,
+          $$GamificationEventsTableOrderingComposer,
+          $$GamificationEventsTableAnnotationComposer,
+          $$GamificationEventsTableCreateCompanionBuilder,
+          $$GamificationEventsTableUpdateCompanionBuilder,
+          (
+            GamificationEventRow,
+            BaseReferences<
+              _$AppDatabase,
+              $GamificationEventsTable,
+              GamificationEventRow
+            >,
+          ),
+          GamificationEventRow,
+          PrefetchHooks Function()
+        > {
+  $$GamificationEventsTableTableManager(
+    _$AppDatabase db,
+    $GamificationEventsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GamificationEventsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GamificationEventsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$GamificationEventsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> trigger = const Value.absent(),
+                Value<int> xpAwarded = const Value.absent(),
+                Value<DateTime> timestamp = const Value.absent(),
+              }) => GamificationEventsCompanion(
+                id: id,
+                trigger: trigger,
+                xpAwarded: xpAwarded,
+                timestamp: timestamp,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String trigger,
+                required int xpAwarded,
+                required DateTime timestamp,
+              }) => GamificationEventsCompanion.insert(
+                id: id,
+                trigger: trigger,
+                xpAwarded: xpAwarded,
+                timestamp: timestamp,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$GamificationEventsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $GamificationEventsTable,
+      GamificationEventRow,
+      $$GamificationEventsTableFilterComposer,
+      $$GamificationEventsTableOrderingComposer,
+      $$GamificationEventsTableAnnotationComposer,
+      $$GamificationEventsTableCreateCompanionBuilder,
+      $$GamificationEventsTableUpdateCompanionBuilder,
+      (
+        GamificationEventRow,
+        BaseReferences<
+          _$AppDatabase,
+          $GamificationEventsTable,
+          GamificationEventRow
+        >,
+      ),
+      GamificationEventRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
   $AppDatabaseManager(this._db);
   $$SignalBucketsTableTableManager get signalBuckets =>
       $$SignalBucketsTableTableManager(_db, _db.signalBuckets);
+  $$GamificationEventsTableTableManager get gamificationEvents =>
+      $$GamificationEventsTableTableManager(_db, _db.gamificationEvents);
 }
