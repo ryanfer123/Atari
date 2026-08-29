@@ -4,7 +4,10 @@
 library;
 
 export 'agent_state.dart';
+export 'capture_result.dart';
 export 'captured_item.dart';
 export 'context_bullet.dart';
+export 'explanation.dart';
 export 'gamification_event.dart';
 export 'overload_event.dart';
+export 'signal_snapshot.dart';

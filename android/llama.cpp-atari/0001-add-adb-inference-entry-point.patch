@@ -1,0 +1,66 @@
+diff --git a/examples/llama.android/app/src/main/java/com/example/llama/MainActivity.kt b/examples/llama.android/app/src/main/java/com/example/llama/MainActivity.kt
+index 872ec2b..f86e9fa 100644
+--- a/examples/llama.android/app/src/main/java/com/example/llama/MainActivity.kt
++++ b/examples/llama.android/app/src/main/java/com/example/llama/MainActivity.kt
+@@ -2,6 +2,7 @@ package com.example.llama
+ 
+ import android.net.Uri
+ import android.os.Bundle
++import android.os.SystemClock
+ import android.util.Log
+ import android.widget.EditText
+ import android.widget.TextView
+@@ -64,6 +65,17 @@ class MainActivity : AppCompatActivity() {
+         // Arm AI Chat initialization
+         lifecycleScope.launch(Dispatchers.Default) {
+             engine = AiChat.getInferenceEngine(applicationContext)
++            intent.getStringExtra(EXTRA_MODEL_PATH)?.let { modelPath ->
++                val modelFile = File(modelPath)
++                if (modelFile.isFile) {
++                    loadModel(modelFile.name, modelFile)
++                    intent.getStringExtra(EXTRA_PROMPT)?.let { prompt ->
++                        runAutomatedInference(prompt)
++                    }
++                } else {
++                    Log.e(TAG, "$AUTOMATION_ERROR model_not_found path=$modelPath")
++                }
++            }
+         }
+ 
+         // Upon CTA button tapped
+@@ -199,6 +211,23 @@ class MainActivity : AppCompatActivity() {
+         }
+     }
+ 
++    /** ADB-accessible smoke path used by ATARI's physical-device benchmark script. */
++    private suspend fun runAutomatedInference(prompt: String) {
++        val output = StringBuilder()
++        val startedAt = SystemClock.elapsedRealtime()
++        Log.i(TAG, "$AUTOMATION_STARTED promptChars=${prompt.length}")
++        try {
++            engine.sendUserPrompt(prompt).collect { token -> output.append(token) }
++            val elapsedMs = SystemClock.elapsedRealtime() - startedAt
++            Log.i(
++                TAG,
++                "$AUTOMATION_COMPLETE elapsedMs=$elapsedMs output=${output.toString().replace('\n', ' ')}"
++            )
++        } catch (error: Exception) {
++            Log.e(TAG, "$AUTOMATION_ERROR generation_failed", error)
++        }
++    }
++
+     /**
+      * Run a benchmark with the model file
+      */
+@@ -246,6 +275,11 @@ class MainActivity : AppCompatActivity() {
+ 
+         private const val DIRECTORY_MODELS = "models"
+         private const val FILE_EXTENSION_GGUF = ".gguf"
++        private const val EXTRA_MODEL_PATH = "atari_model_path"
++        private const val EXTRA_PROMPT = "atari_prompt"
++        private const val AUTOMATION_STARTED = "ATARI_INFERENCE_STARTED"
++        private const val AUTOMATION_COMPLETE = "ATARI_INFERENCE_COMPLETE"
++        private const val AUTOMATION_ERROR = "ATARI_INFERENCE_ERROR"
+ 
+         private const val BENCH_PROMPT_PROCESSING_TOKENS = 512
+         private const val BENCH_TOKEN_GENERATION_TOKENS = 128
