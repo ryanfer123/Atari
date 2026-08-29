@@ -13,6 +13,7 @@ using atari::model::BehavioralEvidence;
 using atari::model::ExplanationService;
 using atari::model::GenerationOptions;
 using atari::model::GenerationResult;
+using atari::model::ModelConfig;
 using atari::model::ModelRuntime;
 using atari::model::Prompt;
 using atari::model::GoalContextSource;
@@ -21,11 +22,24 @@ using atari::model::SourceSelectionService;
 
 class FakeRuntime final : public ModelRuntime {
  public:
+  // Independent of load() below by default, matching the interface
+  // contract's own wording ("a concrete implementation decides what
+  // 'loadable' means") — tests that care about the load()/is_ready()
+  // relationship set both explicitly, see test_load_directs_runtime_at_a_model_path.
   bool ready = true;
+  bool accept_load = true;
   bool throw_on_generate = false;
   GenerationResult next{true, "You're switching apps more than your usual afternoon pattern.", {}};
   Prompt received_prompt;
   GenerationOptions received_options;
+  ModelConfig received_config;
+  int load_call_count = 0;
+
+  bool load(const ModelConfig& config) override {
+    ++load_call_count;
+    received_config = config;
+    return accept_load;
+  }
 
   [[nodiscard]] bool is_ready() const override { return ready; }
 
@@ -196,6 +210,27 @@ void test_runtime_exception_uses_fallback() {
   require(result.fallback_reason == "runtime_exception", "runtime exception should be observable");
 }
 
+void test_load_directs_runtime_at_a_model_path() {
+  FakeRuntime runtime;
+  const ModelConfig config{"/data/local/tmp/Qwen3-4B-Q4_K_M.gguf"};
+
+  const bool accepted = runtime.load(config);
+
+  require(accepted, "load() should report whether the path was accepted");
+  require(runtime.load_call_count == 1, "load() should be observable as having been called");
+  require(runtime.received_config.model_path == config.model_path,
+          "load() should receive the exact path it was directed at");
+}
+
+void test_load_rejection_is_observable() {
+  FakeRuntime runtime;
+  runtime.accept_load = false;
+
+  const bool accepted = runtime.load({"/does/not/exist.gguf"});
+
+  require(!accepted, "load() should be able to report rejection (e.g. a path that isn't a real model)");
+}
+
 void test_non_finite_evidence_is_rejected() {
   FakeRuntime runtime;
   ExplanationService service(runtime);
@@ -224,6 +259,8 @@ int main() {
   test_disallowed_source_selection_uses_fixed_fallback();
   test_duplicate_or_over_cap_selection_is_rejected();
   test_runtime_exception_uses_fallback();
+  test_load_directs_runtime_at_a_model_path();
+  test_load_rejection_is_observable();
   test_non_finite_evidence_is_rejected();
 
   std::cout << "All model contract tests passed.\n";

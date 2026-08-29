@@ -41,9 +41,27 @@ struct GenerationResult {
   std::string error;
 };
 
+// Directs a ModelRuntime at a specific on-device model file. Deliberately
+// minimal — just what "point the runtime at this GGUF file" requires — not
+// a generic engine-configuration struct; add fields only as a concrete
+// implementation actually needs them (context length, thread count, etc.).
+struct ModelConfig {
+  std::string model_path;
+};
+
 class ModelRuntime {
  public:
   virtual ~ModelRuntime() = default;
+
+  // Directs this runtime at config.model_path. Returns false (and leaves
+  // is_ready() false) if the path doesn't resolve to a loadable model —
+  // a concrete implementation decides what "loadable" means for it
+  // (existence/format check now; actual weight loading once a real
+  // inference engine, e.g. llama.cpp, is wired in — see
+  // native/model/README.md). Callers must call load() before relying on
+  // is_ready()/generate(); a runtime that hasn't had load() called is
+  // not ready by definition.
+  virtual bool load(const ModelConfig& config) = 0;
 
   [[nodiscard]] virtual bool is_ready() const = 0;
   virtual GenerationResult generate(

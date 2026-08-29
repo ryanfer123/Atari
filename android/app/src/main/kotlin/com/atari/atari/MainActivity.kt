@@ -17,6 +17,7 @@ import io.flutter.plugin.common.MethodChannel
  */
 class MainActivity : FlutterActivity() {
     private val signalsChannelName = "atari.dev/signals"
+    private val slmChannelName = "atari.dev/slm"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -84,5 +85,36 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, slmChannelName)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "setModelPath" -> {
+                        val path = call.argument<String>("path")
+                        if (path == null) {
+                            result.error("missing_argument", "path is required", null)
+                        } else {
+                            SlmModelConfig.setModelPath(applicationContext, path)
+                            result.success(null)
+                        }
+                    }
+                    "getModelPath" -> {
+                        result.success(SlmModelConfig.getModelPath(applicationContext))
+                    }
+                    "getModelPathStatus" -> {
+                        result.success(SlmModelConfig.status(applicationContext).toChannelMap())
+                    }
+                    else -> result.notImplemented()
+                }
+            }
     }
 }
+
+private fun ModelPathStatus.toChannelMap(): Map<String, Any?> =
+    when (this) {
+        ModelPathStatus.NotConfigured -> mapOf("status" to "notConfigured")
+        ModelPathStatus.FileNotFound -> mapOf("status" to "fileNotFound")
+        ModelPathStatus.NotReadable -> mapOf("status" to "notReadable")
+        ModelPathStatus.NotGguf -> mapOf("status" to "notGguf")
+        is ModelPathStatus.LooksValid -> mapOf("status" to "looksValid", "fileSizeBytes" to fileSizeBytes)
+    }

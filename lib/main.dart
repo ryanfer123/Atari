@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'core/services/app_switch_signal_service.dart';
 import 'core/services/notif_latency_signal_service.dart';
 import 'core/services/signal_collection_status_service.dart';
+import 'core/services/slm_model_config_service.dart';
 import 'core/services/unlock_signal_service.dart';
 
 /// Temporary debug harness for the `backend-native` workstream — exercises
@@ -35,15 +36,18 @@ class SignalTrackerDebugScreen extends StatefulWidget {
     AppSwitchSignalService? appSwitchService,
     NotifLatencySignalService? notifService,
     SignalCollectionStatusService? statusService,
+    SlmModelConfigService? slmModelConfigService,
   }) : unlockService = unlockService ?? UnlockSignalService(),
        appSwitchService = appSwitchService ?? AppSwitchSignalService(),
        notifService = notifService ?? NotifLatencySignalService(),
-       statusService = statusService ?? SignalCollectionStatusService();
+       statusService = statusService ?? SignalCollectionStatusService(),
+       slmModelConfigService = slmModelConfigService ?? SlmModelConfigService();
 
   final UnlockSignalService unlockService;
   final AppSwitchSignalService appSwitchService;
   final NotifLatencySignalService notifService;
   final SignalCollectionStatusService statusService;
+  final SlmModelConfigService slmModelConfigService;
 
   @override
   State<SignalTrackerDebugScreen> createState() =>
@@ -58,6 +62,9 @@ class _SignalTrackerDebugScreenState extends State<SignalTrackerDebugScreen> {
   int _appSwitchesToday = 0;
   bool? _hasNotificationAccess;
   List<Duration> _notifLatenciesToday = const [];
+  String? _modelPath;
+  ModelPathStatusResult? _modelPathStatus;
+  final _modelPathController = TextEditingController();
   String? _error;
   bool _loading = false;
 
@@ -65,6 +72,12 @@ class _SignalTrackerDebugScreenState extends State<SignalTrackerDebugScreen> {
   void initState() {
     super.initState();
     _refresh();
+  }
+
+  @override
+  void dispose() {
+    _modelPathController.dispose();
+    super.dispose();
   }
 
   Future<void> _refresh() async {
@@ -93,6 +106,10 @@ class _SignalTrackerDebugScreenState extends State<SignalTrackerDebugScreen> {
           ? await widget.notifService.getLatenciesSince(startOfToday)
           : const <Duration>[];
 
+      final modelPath = await widget.slmModelConfigService.getModelPath();
+      final modelPathStatus = await widget.slmModelConfigService
+          .getModelPathStatus();
+
       if (!mounted) return;
       setState(() {
         _unlockTimestamps = unlockTimestamps.reversed.toList();
@@ -102,12 +119,52 @@ class _SignalTrackerDebugScreenState extends State<SignalTrackerDebugScreen> {
         _appSwitchesToday = appSwitchesToday;
         _hasNotificationAccess = hasNotificationAccess;
         _notifLatenciesToday = notifLatenciesToday;
+        _modelPath = modelPath;
+        _modelPathStatus = modelPathStatus;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _setModelPath() async {
+    final path = _modelPathController.text.trim();
+    if (path.isEmpty) return;
+    await widget.slmModelConfigService.setModelPath(path);
+    await _refresh();
+  }
+
+  Color? get _modelPathStatusColor {
+    switch (_modelPathStatus?.status) {
+      case ModelPathStatus.looksValid:
+        return Colors.green;
+      case ModelPathStatus.fileNotFound:
+      case ModelPathStatus.notReadable:
+      case ModelPathStatus.notGguf:
+        return Colors.red;
+      case ModelPathStatus.notConfigured:
+      case null:
+        return null;
+    }
+  }
+
+  String _modelPathStatusLabel(ModelPathStatusResult status) {
+    switch (status.status) {
+      case ModelPathStatus.notConfigured:
+        return 'No path configured';
+      case ModelPathStatus.fileNotFound:
+        return 'File not found at that path';
+      case ModelPathStatus.notReadable:
+        return 'File exists but is not readable';
+      case ModelPathStatus.notGguf:
+        return 'File exists but does not look like a GGUF file';
+      case ModelPathStatus.looksValid:
+        final bytes = status.fileSizeBytes ?? 0;
+        final mb = (bytes / (1024 * 1024)).toStringAsFixed(1);
+        return 'Looks like a valid GGUF file ($mb MB)';
     }
   }
 
@@ -211,6 +268,43 @@ class _SignalTrackerDebugScreenState extends State<SignalTrackerDebugScreen> {
             ),
             for (final d in _notifLatenciesToday.take(20))
               Text('${d.inSeconds}s'),
+            const Divider(height: 32),
+            Text(
+              'SLM model config',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Path configuration + existence/GGUF-magic-byte check only — '
+              'no model loading or inference exists yet. Push a file to the '
+              "app's external files dir first, e.g.: adb push model.gguf "
+              '/sdcard/Android/data/com.atari.atari/files/',
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _modelPathController,
+              decoration: const InputDecoration(
+                labelText: 'GGUF file path',
+                hintText:
+                    '/sdcard/Android/data/com.atari.atari/files/model.gguf',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: _loading ? null : _setModelPath,
+              child: const Text('Set model path'),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Configured path: ${_modelPath ?? '(none)'}',
+              style: boldStyle,
+            ),
+            if (_modelPathStatus != null)
+              Text(
+                _modelPathStatusLabel(_modelPathStatus!),
+                style: TextStyle(color: _modelPathStatusColor),
+              ),
           ],
         ),
       ),
