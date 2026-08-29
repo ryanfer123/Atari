@@ -1,7 +1,7 @@
 # Research Brief — On-Device Overload Agent
 **iQOO City Battles 2026 · Open Innovation track · 7-day window (30h city battle + prep)**
 
-Ledger: `/tmp/claude-1000/-home-mahmood-Projects-iQOO/89d85140-bcad-4ae2-a9e0-1565c9856c06/scratchpad/ml-intern/on-device-overload-detection-agent.md` (78 rows across 7 clusters — phone-signal sensing, on-device SLMs, JITAI/nudge effectiveness, bandit personalization/low-N classifiers, on-device embedding models, personal RAG/goal-grounded assistants, context/calendar-aware interventions — plus Dotsin's verified papers; arXiv + HF Papers only, resumable)
+Ledger: `/tmp/claude-1000/-home-mahmood-Projects-iQOO/89d85140-bcad-4ae2-a9e0-1565c9856c06/scratchpad/ml-intern/on-device-overload-detection-agent.md` (78 rows across 7 clusters — phone-signal sensing, on-device SLMs, JITAI/nudge effectiveness, bandit personalization/low-N classifiers, on-device embedding models, personal RAG/goal-grounded assistants, context/calendar-aware interventions — plus Dotsin's verified papers; arXiv + HF Papers only, resumable). A second ledger covers the gamified capture-to-organize expansion (85 rows across 4 clusters — freeform selection + document rectification, on-device OCR/VLM document parsing, on-device image embedding models, gamification/habit-formation effectiveness + wellbeing tension) at `/tmp/claude-1000/-home-mahmood-Projects-iQOO/89d85140-bcad-4ae2-a9e0-1565c9856c06/scratchpad/ml-intern/gamified-capture-organize-layer.md`.
 
 ---
 
@@ -406,6 +406,147 @@ existing SlmExplainer, just richer input, not a new component.
 
 ---
 
+## Expansion: gamified capture-to-organize layer
+
+Two more additions on top of the goal-context layer above: a **freeform, Google-Lens-style capture
+flow** (the user draws a loose shape over a photographed page or on-screen content, the app turns that
+into a clean crop and extracts structured items), and a **gamification layer** (XP, levels, quests,
+streaks, achievements) combining "addictiveness" with organization — Habitica-style engagement applied
+to the app's existing todo/note/health-target model. This section covers what the literature actually
+supports for each, and is deliberately blunt about the one place it argues *against* the direction
+asked for: gamification sits in real tension with this app's own anti-overload mission, and the
+literature does not resolve that tension cleanly. Ledger: 85 rows across 4 clusters (A: freeform
+selection + document rectification, B: on-device OCR/VLM document parsing, C: on-device image embedding
+models, D: gamification/habit-formation effectiveness + wellbeing tension), same ledger location
+pattern as before.
+
+### Freeform capture: no single paper solves "circle it, get a clean image" — compose two models
+
+Nothing in the survey does loose-scribble-to-clean-crop as one studied task. The closest matches are
+interactive-segmentation models (scribble/click prompts to a mask) and, separately, document
+rectification models (perspective correction for a photographed page) — the pipeline has to compose
+one of each:
+
+- **EdgeSAM** (arXiv:2312.06660, Dec 2023) distills SAM's ViT encoder into a purely CNN-based
+  architecture explicitly optimized for edge devices — the most concretely edge-targeted, released-code
+  (github.com/chongzhou96/EdgeSAM) option for turning a loose scribble/click into a clean mask.
+  **SqueezeSAM** (arXiv:2312.06736, Dec 2023, Meta Reality Labs) is the closest match to the *exact*
+  product scenario — a mobile interactive-segmentation model built specifically for a phone camera app
+  taking arbitrary loose user input — but has no released weights found, so it's a design reference, not
+  a drop-in model. TinySAM, RepViT-SAM, and EfficientSAM are viable alternates in the same family if
+  EdgeSAM's accuracy/speed tradeoff doesn't fit after Day-1-of-this-workstream testing.
+- **DocScanner** (arXiv:2110.14968, Oct 2021, code released) rectifies a photographed page via
+  progressive, iterative refinement of a shared lightweight module rather than one-shot regression — the
+  best-fit dewarping stage for a photographed whiteboard/notebook page at an angle. This step only
+  applies to camera-photo captures; a pure in-app screenshot region is already flat and skips it
+  entirely.
+- **No paper reports real Android NPU latency for any of these** — every "mobile" SAM variant benchmarks
+  FLOPs/GPU timing, not measured on-device ms-latency, and the same is true of every rectification
+  network found. This is the same coverage gap the project already carries for the SLM (RESEARCH.md
+  "Coverage gaps" above) — treat it as confirmation of a project-wide pattern, not a new surprise: every
+  on-device model choice here needs first-party latency verification before it's trusted, not just the
+  language model.
+
+### OCR / structured extraction: classical OCR wins on deployability, VLM wins on layout understanding
+
+- **PP-OCRv5** (arXiv:2603.24373, Mar 2026, ~5M params) and **PP-OCRv6** (arXiv:2606.13108, Jun 2026,
+  1.5-34.5M params) are tiny, deployable, and the right MVP pick for pulling raw text off a photographed
+  schedule or list — both explicitly claim to rival billion-parameter VLMs on OCR tasks at a fraction of
+  the size.
+- **PaddleOCR-VL** (arXiv:2510.14528, Oct 2025, 0.9B params) is the upgrade path if flat OCR text loses
+  too much of a timetable's row/column structure — a sub-1B document-parsing VLM, SOTA on OmniDocBench,
+  purpose-built for tables/formulas/charts, not just running text.
+- **Donut** (arXiv:2111.15664, Nov 2021) is a useful architectural reference, not the pick: an
+  OCR-free end-to-end model (reads the image directly, no separate OCR engine) proving the pattern works
+  in principle, but it's 2021-era with no updated on-device numbers.
+- **E-ARMOR** (HF-2509.03615, Sep 2025) is the closest thing found to a direct, controlled comparison of
+  classical edge-optimized OCR against several small/mid VLM-OCR approaches (GOT-OCR2.0, InternVL, Qwen-
+  VL family, MiniCPM) under resource constraints — use it as the evaluation reference when doing
+  Day-1-of-this-workstream testing, rather than trusting any single paper's self-reported numbers.
+
+### Should captured images get their own embedding, or is OCR text + the existing pipeline enough?
+
+Genuine disagreement in the literature, reported both ways rather than smoothed over:
+
+- **For a dedicated image embedding:** Document Screenshot Embedding / DSE (arXiv:2406.11251, Jun 2024)
+  found that embedding a document screenshot directly beats OCR-then-text-embed by 15+ nDCG points on
+  slide retrieval and by 17 points top-1 accuracy vs. BM25 on text-intensive Wiki-SS — for text-and-
+  layout-dense images (which schedules/whiteboards/timetables are), skipping OCR and embedding the image
+  directly can meaningfully win. UniSE/Vis-IR (arXiv:2502.11431, Feb 2025) makes the same architectural
+  argument: treat mixed text/image/table content as one unified "screenshot embedding."
+- **Against (or "not needed"):** CIVIL (arXiv:2510.04010, Oct 2025), on personal first-person photo
+  retrieval, found that generating a caption and embedding it with a text model — i.e., reusing exactly
+  the kind of pipeline this project already has (EmbeddingGemma-300M over text) — works well, and is
+  explicitly framed as the alternative to CLIP-style image embedding.
+- Both DSE and CIVIL make their case with large/server-scale models, not mobile-sized ones — neither
+  result guarantees a small on-device model reproduces the same gap in either direction. PhotoBench
+  (arXiv:2603.01493, Mar 2026) adds a further caution: pure embedding models, image or text, "collapse"
+  on personal-photo retrieval once non-visual context (time, place, social) matters — neither modality
+  alone is a complete answer.
+- **Resolution, stated as a judgment call, not a proven result:** the MVP does **not** add a dedicated
+  image embedder. Captured images are OCR'd, and the OCR text goes into the existing EmbeddingGemma-300M
+  notes pipeline (§ "Expansion: goal-context layer" above) exactly like a typed note. If testing shows
+  OCR text is losing too much of a timetable's structure for retrieval to actually work,
+  **MobileCLIP2** (arXiv:2508.20691, Aug 2025, Apple, 50-150M params, 3-15ms latency, best small
+  on-device CLIP option found in the survey) is the concrete upgrade path — but only build it if the
+  cheaper OCR+text-embedding path is measurably insufficient, not by default.
+
+### Gamification: the literature does not resolve the tension with this app's own mission — treat that as a design constraint, not a feature to bolt on
+
+This is the subsection that matters most, because the app's own stated boundary ("Gamification rewards
+intentional action and recovery, not simply reduced screen time," per the project README) turns out to
+need to be a hard rule, not a nice-to-have — the literature explains why:
+
+- **Direct empirical link between gamified/persuasive design and addictive use.** "Do Persuasive Designs
+  Make Smartphones More Addictive?" (arXiv:2106.02604, Jun 2021, N=183) found persuasive-design elements
+  — which include reward/gamification mechanics — correlate with exactly the problematic-use patterns
+  this app exists to reduce.
+- **The same finding, sharper, on streaks specifically.** "AI-Driven Feedback Loops in Digital
+  Technologies" (arXiv:2411.09706, Oct 2024, N=200) found streaks/badges/real-time feedback
+  *simultaneously* help goal attainment **and** independently increase anxiety, autonomy-loss, and
+  compulsive feedback-checking. This is not a clean win for gamification — it is a genuine, documented
+  double edge, and the paper's own recommendation is to design feedback mechanisms that reduce cognitive
+  load, not maximize engagement.
+- **Manipulative design isn't fixable after the fact.** A Systematic Review of Dark Patterns
+  (arXiv:2604.15323, Mar 2026) is the most rigorous single source here: manipulative UI patterns
+  measurably change behavior (with large effect-size variance), and attempts to de-bias or counter dark
+  patterns once they're in place mostly fail. "Ship it, then add a wellbeing disclaimer" is not a real
+  mitigation by this evidence — the mechanic has to be designed correctly from the start.
+- **The app's core mission doesn't actually need gamification to work.** MindShift (arXiv:2309.16639,
+  already in Core Reading above) — a phone-overload-reduction agent in the same problem space as this
+  app — gets real measured effect sizes (acceptance +4.7 to +22.5pp, usage duration −7.4 to −9.8%) from
+  a *non-gamified*, context-aware persuasion approach. Gamification is being added here for engagement
+  and hackathon-novelty reasons, not because the literature says the anti-overload mechanism requires
+  it — keep that distinction explicit in the pitch rather than implying gamification is load-bearing for
+  the core detection/intervention loop.
+- **Concrete design rule this evidence supports** (logic, built on the findings above, not a citation of
+  its own): reward *completion and effort* — a todo finished, a capture-to-organize action completed, an
+  intervention the feedback loop's own pre/post measurement confirms worked (§4.7) — never reward raw
+  reduced-screen-time or app-avoidance directly, and never use a streak that can be *lost* by a single
+  missed day. "Unpacking Adherence and Engagement in Pervasive Health Games" (arXiv:2106.13747, Jun 2021)
+  ties lasting adherence to Self-Determination Theory constructs (autonomy, relatedness) rather than
+  reward mechanics themselves; "Designing for Engagement" (arXiv:2605.16276, Apr 2026) proposes exactly
+  this SDT-over-raw-mechanics framework for digital health design. Concretely: levels/XP that only go up,
+  and quests that can be re-attempted without penalty, instead of a fragile daily streak.
+- **A realistic adherence number for the pitch, not an oversell.** The same health-games paper
+  (arXiv:2106.13747) cites field retention of only 41% (single-player) / 29% (social) at 90 days even for
+  well-designed gamified health apps — gamification measurably helps engagement, it does not "solve" it.
+- **A concrete self-audit tool before shipping.** "Playing Games with My Heart" (arXiv:2605.08093, Apr
+  2026) audits popular AI companion apps for manipulative-engagement dark patterns via a repeatable
+  manual-annotation methodology. Before shipping the gamification layer, run the same style of self-audit
+  against this app's own streak/XP/notification copy, using the taxonomy from "Dark Patterns at Scale"
+  (arXiv:1907.07032) as the checklist — treat any mechanic that would fail that audit as a bug, not a
+  feature. See IMPLEMENTATION.md §4.7 for where this lands as an actual pre-ship task.
+- **Coverage note, stated honestly:** arXiv/HF indexes almost none of the core gamification/
+  Self-Determination-Theory/streak-mechanics literature — it lives in ACM CHI/HCI proceedings, outside
+  this skill's arXiv+HF-Papers scope. Several exact-phrase queries ("variable ratio reinforcement,"
+  "streak mechanic behavior change," "gamification randomized controlled trial app") returned zero hits.
+  The adherence-effect-size evidence above is real but drawn from adjacent domains (health games, social
+  media, digital-stress interventions), not to-do/habit apps specifically — treat it as directional
+  support, not a tight domain match.
+
+---
+
 ## Open questions / risks
 
 - **Cold start on a loaner/demo phone.** The device you build on for a week won't be the device judges see it on. The Bayesian population-prior blend (concept #3 above) is not optional — it's the only way the demo works on unfamiliar hardware with no usage history.
@@ -415,3 +556,6 @@ existing SlmExplainer, just richer input, not a new component.
 - **Two on-device models loaded simultaneously** (Gemma 3 1B generator + EmbeddingGemma 300M retriever, ~1.3GB combined) is unverified on the loaner Snapdragon device — test concurrent memory pressure on Day 1 alongside the generator-only latency test, not as an afterthought once the goal-context layer is built. Arctic-Embed-XS (22.5M) is the fallback if this is a problem.
 - **"Grounding in goals improves intervention outcomes" is this project's own hypothesis, not a proven literature claim** — the closest study (arXiv:2505.23997) is qualitative-only, N=8. Don't overclaim this in the pitch; frame it as "informed by the literature, validated by our own feedback-loop data," which is both honest and still a strong technical-depth story.
 - **Cross-source fusion is explicitly out of scope** (see "Expansion" section above) — the risk is scope creep during the battle: the temptation to make the SLM "reason across" notes+todos+calendar+health in one open-ended prompt. Resist it; the literature says even frontier models struggle at 34.5% pass@1 on exactly this. Keep retrieval-per-source-type and combine only at the flat-prompt-assembly step.
+- **No paper does freeform-scribble-to-clean-crop + document rectification end-to-end.** Expect to compose an EdgeSAM-class segmentation model with a DocScanner-class rectification model as genuinely first-party integration work, not a model to just download — and budget device-testing time for both, same as the SLM's unverified Snapdragon-latency risk above.
+- **Whether captured images need a dedicated image embedding (MobileCLIP2) or can rely on OCR text through the existing EmbeddingGemma pipeline is a genuine open call, not a settled one.** DSE/UniSE argue dedicated screenshot embedding wins on text-dense images; CIVIL argues caption-then-text-embedding is enough. The MVP defers this and ships OCR+text-embedding only — a dedicated image embedder is a measured upgrade, never a default add.
+- **Gamification is in direct, evidence-backed tension with the app's own anti-overload mission**, and the literature does not resolve this cleanly — arXiv:2411.09706 documents streaks/badges helping attainment *and* independently increasing anxiety and compulsive checking, as one real finding, not two competing ones to pick between. Mitigate with the reward-completion-not-avoidance design rule and the pre-ship dark-patterns self-audit (§ "Expansion: gamified capture-to-organize layer" above) — adding streaks/XP is not "done" until that audit has run.
