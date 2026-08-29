@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../viewmodels/dashboard_viewmodel.dart';
 import '../../../core/models/view_state.dart';
 import '../../../core/widgets/atari_button.dart';
+import '../../../core/widgets/atari_card.dart';
 import '../../../core/theme/theme_toggle_button.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -33,59 +34,66 @@ class DashboardScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Status Header Card (Glassmorphism)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(0), // Keep sharp edges
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                    child: Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('SYSTEM STATUS', style: Theme.of(context).textTheme.labelLarge),
-                            const SizedBox(height: 8),
-                            Text(
-                              vm.agentState.name.toUpperCase(), 
-                              style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                                color: Theme.of(context).primaryColor,
-                              )
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text('XP / LEVEL', style: Theme.of(context).textTheme.labelLarge),
-                                Text('${vm.gamification?.totalXp ?? 0} XP', style: Theme.of(context).textTheme.titleLarge),
-                              ],
-                            ),
-                          ],
+                // 1. Warning Card
+                AtariCard(
+                  padding: const EdgeInsets.all(16),
+                  isSecondary: true,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.science_outlined, size: 28),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          'No on-device models loaded. Text extraction, difficulty and explanations are coming from deterministic placeholders.',
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ),
-                    ),
-                  ),
-                ),
-                
-                const SizedBox(height: 32),
-                
-                AtariButton(
-                  isSecondary: true,
-                  onPressed: () => vm.simulateOverload(),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.warning_amber_rounded),
-                      const SizedBox(width: 8),
-                      const Text('SIMULATE OVERLOAD'),
                     ],
                   ),
                 ),
+                const SizedBox(height: 16),
+                
+                // 2. Stats Grid Card
+                AtariCard(
+                  padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildStatColumn(context, '1', 'Level'),
+                      _buildStatColumn(context, '0', 'XP'),
+                      _buildStatColumn(context, '0', 'Done today'),
+                      _buildStatColumn(context, '0', 'Open'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // 3. Due Soon Section
+                Text('Due soon', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                const Text('Nothing with a deadline. Capture something or add a task.'),
+                
+                const SizedBox(height: 32),
+
+                // 4. Scheduled Section
+                Text('Scheduled', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                const Text('Nothing scheduled. Reminders you confirm will show here.'),
               ],
             ),
           );
         }
       ),
+    );
+  }
+
+  Widget _buildStatColumn(BuildContext context, String value, String label) {
+    return Column(
+      children: [
+        Text(value, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 4),
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
+      ],
     );
   }
 }

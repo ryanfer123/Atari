@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../theme/space_scaffold.dart';
 import '../theme/atari_theme.dart';
 import '../widgets/atari_bottom_nav_bar.dart';
+import '../widgets/draggable_cat_button.dart';
 
 class MainLayoutScreen extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
@@ -20,22 +21,9 @@ class MainLayoutScreen extends StatelessWidget {
           // so the SpaceScaffold background shows through.
           Positioned.fill(child: navigationShell),
 
-          // 2. Floating Action Button for Capture (above the navbar)
-          Positioned(
-            right: 24,
-            bottom: 110,
-            child: FloatingActionButton.extended(
-              onPressed: () => context.go('/capture'),
-              // Match Atari theme (User didn't explicitly request the blue from the image)
-              backgroundColor: Theme.of(context).brightness == Brightness.dark 
-                  ? AtariTheme.primaryYellow 
-                  : Colors.black,
-              foregroundColor: Theme.of(context).brightness == Brightness.dark 
-                  ? Colors.black 
-                  : AtariTheme.primaryYellow,
-              icon: const Icon(Icons.document_scanner),
-              label: const Text('Capture', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
+          // 2. Draggable Cat (replaces Capture FAB)
+          DraggableCatButton(
+            onTap: () => context.go('/capture'),
           ),
 
           // 3. Custom Glassmorphic Bottom Navigation Bar
