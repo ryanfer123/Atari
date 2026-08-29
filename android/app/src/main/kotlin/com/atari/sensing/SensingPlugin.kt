@@ -28,6 +28,7 @@ class SensingPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, EventChann
     private var activity: Activity? = null
 
     private lateinit var appSwitchTracker: AppSwitchTracker
+    private var unlockReceiver: UnlockTracker? = null
     private var eventSink: EventChannel.EventSink? = null
     private val handler = Handler(Looper.getMainLooper())
     private var periodicRunnable: Runnable? = null
@@ -35,6 +36,8 @@ class SensingPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, EventChann
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         context = binding.applicationContext
         UnlockTracker.init(context)
+        NotifLatencyTracker.init(context)
+        unlockReceiver = UnlockTracker.registerRuntimeReceiver(context)
         appSwitchTracker = AppSwitchTracker(context)
 
         methodChannel = MethodChannel(binding.binaryMessenger, "com.atari/sensing")
@@ -48,6 +51,8 @@ class SensingPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, EventChann
         methodChannel.setMethodCallHandler(null)
         eventChannel.setStreamHandler(null)
         stopPeriodicUpdates()
+        UnlockTracker.unregisterRuntimeReceiver(context, unlockReceiver)
+        unlockReceiver = null
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {

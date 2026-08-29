@@ -1,16 +1,17 @@
 diff --git a/examples/llama.android/app/src/main/java/com/example/llama/MainActivity.kt b/examples/llama.android/app/src/main/java/com/example/llama/MainActivity.kt
-index 872ec2b..f86e9fa 100644
+index 872ec2b..22f4839 100644
 --- a/examples/llama.android/app/src/main/java/com/example/llama/MainActivity.kt
 +++ b/examples/llama.android/app/src/main/java/com/example/llama/MainActivity.kt
-@@ -2,6 +2,7 @@ package com.example.llama
+@@ -2,6 +2,8 @@ package com.example.llama
  
  import android.net.Uri
  import android.os.Bundle
 +import android.os.SystemClock
++import android.util.Base64
  import android.util.Log
  import android.widget.EditText
  import android.widget.TextView
-@@ -64,6 +65,17 @@ class MainActivity : AppCompatActivity() {
+@@ -64,6 +66,20 @@ class MainActivity : AppCompatActivity() {
          // Arm AI Chat initialization
          lifecycleScope.launch(Dispatchers.Default) {
              engine = AiChat.getInferenceEngine(applicationContext)
@@ -18,8 +19,11 @@ index 872ec2b..f86e9fa 100644
 +                val modelFile = File(modelPath)
 +                if (modelFile.isFile) {
 +                    loadModel(modelFile.name, modelFile)
-+                    intent.getStringExtra(EXTRA_PROMPT)?.let { prompt ->
-+                        runAutomatedInference(prompt)
++                    val prompt = intent.getStringExtra(EXTRA_PROMPT_BASE64)?.let {
++                        String(Base64.decode(it, Base64.NO_WRAP), Charsets.UTF_8)
++                    } ?: intent.getStringExtra(EXTRA_PROMPT)
++                    prompt?.let {
++                        runAutomatedInference(it)
 +                    }
 +                } else {
 +                    Log.e(TAG, "$AUTOMATION_ERROR model_not_found path=$modelPath")
@@ -28,7 +32,7 @@ index 872ec2b..f86e9fa 100644
          }
  
          // Upon CTA button tapped
-@@ -199,6 +211,23 @@ class MainActivity : AppCompatActivity() {
+@@ -199,6 +215,23 @@ class MainActivity : AppCompatActivity() {
          }
      }
  
@@ -52,12 +56,13 @@ index 872ec2b..f86e9fa 100644
      /**
       * Run a benchmark with the model file
       */
-@@ -246,6 +275,11 @@ class MainActivity : AppCompatActivity() {
+@@ -246,6 +279,12 @@ class MainActivity : AppCompatActivity() {
  
          private const val DIRECTORY_MODELS = "models"
          private const val FILE_EXTENSION_GGUF = ".gguf"
 +        private const val EXTRA_MODEL_PATH = "atari_model_path"
 +        private const val EXTRA_PROMPT = "atari_prompt"
++        private const val EXTRA_PROMPT_BASE64 = "atari_prompt_b64"
 +        private const val AUTOMATION_STARTED = "ATARI_INFERENCE_STARTED"
 +        private const val AUTOMATION_COMPLETE = "ATARI_INFERENCE_COMPLETE"
 +        private const val AUTOMATION_ERROR = "ATARI_INFERENCE_ERROR"

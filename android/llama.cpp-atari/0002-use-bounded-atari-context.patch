@@ -1,0 +1,11 @@
+diff --git a/examples/llama.android/lib/src/main/cpp/ai_chat.cpp b/examples/llama.android/lib/src/main/cpp/ai_chat.cpp
+--- a/examples/llama.android/lib/src/main/cpp/ai_chat.cpp
++++ b/examples/llama.android/lib/src/main/cpp/ai_chat.cpp
+@@ -31,4 +31,6 @@
+-constexpr int   DEFAULT_CONTEXT_SIZE    = 8192;
++// ATARI prompts are bounded and source selection is capped. Keeping the
++// upstream demo's 8192-token cache resident wastes ~1 GiB on the target phone.
++constexpr int   DEFAULT_CONTEXT_SIZE    = 1024;
+ constexpr int   OVERFLOW_HEADROOM       = 4;
+ constexpr int   BATCH_SIZE              = 512;
+ constexpr float DEFAULT_SAMPLER_TEMP    = 0.3f;

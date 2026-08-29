@@ -1,14 +1,15 @@
 # On-device model runtime decision
 
-Status: runtime smoke test complete; full-model benchmark pending
+Status: full-model device gate complete; smaller-model comparison required
 
 Date: 2026-08-29
 
 ## Decision
 
-Use the official Qwen3-4B Q4_K_M GGUF as ATARI's primary on-device candidate and
-the maintained upstream `llama.cpp` Android binding as its runtime. Retain Gemma 3
-1B QAT Q4_0 as a low-memory comparison candidate rather than the product default.
+Use the maintained upstream `llama.cpp` Android binding as ATARI's GGUF runtime.
+Qwen3-4B Q4_K_M is now a proven quality/reference candidate, but it does not pass
+the resident-memory gate as the default model yet. Benchmark Gemma 3 1B QAT Q4_0
+or a comparable sub-1B model next, then choose using the same prompt contract.
 
 Do not fine-tune a model for the MVP. First establish whether constrained prompting
 plus output validation meets the explanation-quality bar.
@@ -96,15 +97,23 @@ The runtime-independent contract enforces these rules before UI delivery:
 
 ## Device benchmark gate
 
-The first physical-device runtime smoke test completed on 2026-08-29. The
-upstream arm64 sample built, installed, launched, and loaded the
-`armv9.2_2` GGML CPU backend on the iQOO 15. This proves runtime and ABI
-compatibility, but it is not an inference benchmark because no model weights were
-loaded. The captured baseline is in
-`research/device-results/2026-08-29-iqoo-15-runtime-smoke.json`.
+The full Qwen3-4B Q4_K_M device gate completed on 2026-08-29. The iQOO 15 loaded
+the 2,497,280,256-byte GGUF through the ARMv9.2 GGML CPU backend and produced a
+contract-valid sentence. The first run generated in 5.988 seconds, while a second
+bounded-context run took 29.500 seconds under substantially higher swap pressure.
 
-Run both viable runtimes against the same prompt set on the actual iQOO device and
-record:
+The upstream 8192-token context allocated a 1152 MiB KV cache. ATARI's bounded
+1024-token patch reduced that cache to 144 MiB and reduced observed RSS from about
+4.95 GiB to 4.51 GiB, but total PSS remained around 5.15 GiB and swap rose to about
+797 MiB in the second run. This proves compatibility and useful output, but not a
+safe always-resident configuration alongside OCR and embedding models.
+
+Evidence is recorded in:
+
+- `research/device-results/2026-08-29-iqoo-15-runtime-smoke.json`
+- `research/device-results/2026-08-29-iqoo-15-qwen3-4b-inference.json`
+
+Run the selected smaller comparison model against the same prompt set and record:
 
 - model file size and installed footprint
 - cold model-load latency

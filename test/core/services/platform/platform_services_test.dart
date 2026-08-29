@@ -46,7 +46,7 @@ void main() {
       expect(perms['notificationAccess'], false);
     });
 
-    test('PlatformSlmService invokes explain and masked source selection', () async {
+    test('PlatformSlmService deserializes mocked SLM channel replies', () async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(slmChannel, (MethodCall call) async {
         if (call.method == 'explain') {
@@ -87,9 +87,10 @@ void main() {
       );
       expect(selection.sources, [GoalContextSource.todos, GoalContextSource.notes]);
       expect(selection.usedModel, true);
+      expect(await service.isReady(), false);
     });
 
-    test('PlatformCaptureService invokes native vision crop and OCR', () async {
+    test('PlatformCaptureService deserializes a mocked capture reply', () async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(captureChannel, (MethodCall call) async {
         if (call.method == 'capture') {

@@ -13,6 +13,7 @@ import java.util.Locale
  *
  * Channel: com.atari/tts
  */
+@Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
 class TtsPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, TextToSpeech.OnInitListener {
 
     private lateinit var methodChannel: MethodChannel
@@ -73,6 +74,10 @@ class TtsPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, TextToSpeech.O
                 }
 
                 val utteranceId = "atari_explanation_${System.currentTimeMillis()}"
+                val speechRate = (call.argument<Double>("speechRate") ?: 1.0).toFloat().coerceIn(0.5f, 2.0f)
+                val pitch = (call.argument<Double>("pitch") ?: 1.0).toFloat().coerceIn(0.5f, 2.0f)
+                tts?.setSpeechRate(speechRate)
+                tts?.setPitch(pitch)
                 tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
                 result.success(true)
             }

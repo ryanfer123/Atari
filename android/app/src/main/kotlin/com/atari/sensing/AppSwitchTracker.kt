@@ -48,13 +48,10 @@ class AppSwitchTracker(private val context: Context) {
 
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
-            // ACTIVITY_RESUMED (1) or MOVE_TO_FOREGROUND (1)
-            if (event.eventType == UsageEvents.Event.ACTIVITY_RESUMED ||
-                event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND
-            ) {
+            if (event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
                 val currentPackage = event.packageName
                 if (currentPackage != null && currentPackage != lastPackage) {
-                    switchCount++
+                    if (lastPackage != null) switchCount++
                     lastPackage = currentPackage
                 }
             }

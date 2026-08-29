@@ -94,9 +94,9 @@ class PlatformSlmService implements ISlmExplainerService {
   Future<bool> isReady() async {
     try {
       final result = await _methodChannel.invokeMethod<bool>('isModelReady');
-      return result ?? true;
+      return result ?? false;
     } catch (_) {
-      return true;
+      return false;
     }
   }
 

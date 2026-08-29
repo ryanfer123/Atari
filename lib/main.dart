@@ -40,8 +40,10 @@ class AtariApp extends StatelessWidget {
             backgroundColor: const Color(0xFF6C63FF),
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            textStyle:
+                const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
           ),
         ),
         useMaterial3: true,
@@ -72,7 +74,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     windowEnd: DateTime.now(),
   );
 
-  Map<String, bool> _permissions = {'usageAccess': false, 'notificationAccess': false};
+  Map<String, bool> _permissions = {
+    'usageAccess': false,
+    'notificationAccess': false
+  };
   Explanation? _lastExplanation;
   SourceSelection? _lastSelection;
   CaptureResult? _lastCapture;
@@ -84,7 +89,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _refreshData();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 4), (_) => _refreshData());
+    _refreshTimer =
+        Timer.periodic(const Duration(seconds: 4), (_) => _refreshData());
   }
 
   @override
@@ -94,7 +100,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _refreshData() async {
-    final snapshot = await _sensingService.getCurrentSnapshot(windowMinutes: 15);
+    final snapshot =
+        await _sensingService.getCurrentSnapshot(windowMinutes: 15);
     final perms = await _sensingService.checkPermissions();
     if (mounted) {
       setState(() {
@@ -119,11 +126,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
 
     final bullets = [
-      const ContextBullet(source: 'todo', text: 'CS 301 Lab Assignment (due 4:00 PM)'),
-      const ContextBullet(source: 'health', text: 'Hydration target: 4 of 8 glasses'),
+      const ContextBullet(
+          source: 'todo', text: 'CS 301 Lab Assignment (due 4:00 PM)'),
+      const ContextBullet(
+          source: 'health', text: 'Hydration target: 4 of 8 glasses'),
     ];
 
-    final explanation = await _slmService.generateExplanation(event, contextBullets: bullets);
+    final explanation =
+        await _slmService.generateExplanation(event, contextBullets: bullets);
     if (mounted) {
       setState(() {
         _lastExplanation = explanation;
@@ -205,13 +215,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: const Color(0xFF6C63FF)),
               ),
-              child: const Text('ATARI', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              child: const Text('ATARI',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             ),
             const SizedBox(width: 12),
             const Expanded(
               child: Text(
                 'On-Device Agent',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.white70),
+                style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white70),
               ),
             ),
             Container(
@@ -223,11 +237,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               child: Row(
                 children: [
-                  Container(width: 8, height: 8, decoration: BoxDecoration(color: stateColor, shape: BoxShape.circle)),
+                  Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                          color: stateColor, shape: BoxShape.circle)),
                   const SizedBox(width: 6),
                   Text(
                     _agentState.name.toUpperCase(),
-                    style: TextStyle(color: stateColor, fontSize: 11, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: stateColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -250,12 +271,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.shield_outlined, color: Color(0xFF4ADE80), size: 22),
+                  Icon(Icons.shield_outlined,
+                      color: Color(0xFF4ADE80), size: 22),
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       '100% On-Device · Zero INTERNET Permission Declared',
-                      style: TextStyle(color: Color(0xFFF1F5F9), fontSize: 12, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                          color: Color(0xFFF1F5F9),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -266,7 +291,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             // Live Signal Cards
             const Text(
               'LIVE BEHAVIOURAL SENSING (METADATA ONLY)',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white54, letterSpacing: 1.1),
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white54,
+                  letterSpacing: 1.1),
             ),
             const SizedBox(height: 8),
             Row(
@@ -294,7 +323,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Expanded(
                   child: _buildMetricCard(
                     title: 'Notif Latency',
-                    value: _snapshot.avgNotifLatencyMs > 0 ? '${_snapshot.avgNotifLatencyMs.toInt()}ms' : 'N/A',
+                    value: _snapshot.avgNotifLatencyMs > 0
+                        ? '${_snapshot.avgNotifLatencyMs.toInt()}ms'
+                        : 'N/A',
                     subtitle: 'Avg response',
                     icon: Icons.notifications_active_outlined,
                     color: const Color(0xFFF472B6),
@@ -313,9 +344,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     const Row(
                       children: [
-                        Icon(Icons.security, color: Color(0xFF6C63FF), size: 20),
+                        Icon(Icons.security,
+                            color: Color(0xFF6C63FF), size: 20),
                         SizedBox(width: 8),
-                        Text('System Access Status', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        Text('System Access Status',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 14)),
                       ],
                     ),
                     const SizedBox(height: 10),
@@ -323,15 +357,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        _buildPermChip('Usage Access', _permissions['usageAccess'] ?? false, () {
+                        _buildPermChip('Usage Access',
+                            _permissions['usageAccess'] ?? false, () {
                           _sensingService.requestUsagePermission();
                         }),
-                        _buildPermChip('Notification Listener', _permissions['notificationAccess'] ?? false, () {
+                        _buildPermChip('Notification Listener',
+                            _permissions['notificationAccess'] ?? false, () {
                           _sensingService.requestNotificationPermission();
                         }),
                         OutlinedButton.icon(
                           icon: const Icon(Icons.add, size: 16),
-                          label: const Text('Simulate Unlock', style: TextStyle(fontSize: 12)),
+                          label: const Text('Simulate Unlock',
+                              style: TextStyle(fontSize: 12)),
                           onPressed: () async {
                             await _sensingService.recordSimulatedUnlock();
                             await _refreshData();
@@ -347,8 +384,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
             // On-Device SLM Explanation Section
             const Text(
-              'ON-DEVICE SLM EXPLANATION & TTS (QWEN3-4B / GEMMA)',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white54, letterSpacing: 1.1),
+              'SAFE EXPLANATION FALLBACK & OFFLINE TTS (MODEL RUNTIME PENDING)',
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white54,
+                  letterSpacing: 1.1),
             ),
             const SizedBox(height: 8),
             Card(
@@ -367,7 +408,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                         if (_lastExplanation != null)
                           IconButton.filledTonal(
-                            icon: const Icon(Icons.volume_up, color: Color(0xFF6C63FF)),
+                            icon: const Icon(Icons.volume_up,
+                                color: Color(0xFF6C63FF)),
                             tooltip: 'Speak Aloud (Offline TTS)',
                             onPressed: _speakExplanation,
                           ),
@@ -385,22 +427,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'SLM GENERATED EXPLANATION (1-SENTENCE BOUNDED):',
-                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white38),
+                            Text(
+                              _lastExplanation!.usedModel
+                                  ? 'MODEL EXPLANATION (1-SENTENCE BOUNDED):'
+                                  : 'DETERMINISTIC SAFE FALLBACK:',
+                              style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white38),
                             ),
                             const SizedBox(height: 6),
                             Text(
                               '"${_lastExplanation!.sentence}"',
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFFE2E8F0)),
+                              style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFFE2E8F0)),
                             ),
                             const SizedBox(height: 10),
-                            const Text('Grounded Context Bullets:', style: TextStyle(fontSize: 11, color: Colors.white60)),
+                            const Text('Grounded Context Bullets:',
+                                style: TextStyle(
+                                    fontSize: 11, color: Colors.white60)),
                             const SizedBox(height: 4),
                             ..._lastExplanation!.contextBullets.map(
                               (b) => Padding(
                                 padding: const EdgeInsets.only(bottom: 2),
-                                child: Text('• [${b.source}] ${b.text}', style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+                                child: Text('• [${b.source}] ${b.text}',
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF94A3B8))),
                               ),
                             ),
                           ],
@@ -415,8 +470,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
             // Masked Agentic Source Selection Section
             const Text(
-              'MASKED AGENTIC TOOL SELECTION (§4.8)',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white54, letterSpacing: 1.1),
+              'BOUNDED SOURCE SELECTION (§4.8 · MODEL RUNTIME PENDING)',
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white54,
+                  letterSpacing: 1.1),
             ),
             const SizedBox(height: 8),
             Card(
@@ -439,7 +498,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       const Divider(height: 24, color: Color(0xFF2E334D)),
                       Text(
                         _lastSelection!.reasoning,
-                        style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8), fontStyle: FontStyle.italic),
+                        style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF94A3B8),
+                            fontStyle: FontStyle.italic),
                       ),
                       const SizedBox(height: 8),
                       Wrap(
@@ -447,9 +509,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         runSpacing: 6,
                         children: _lastSelection!.sources.map((s) {
                           return Chip(
-                            backgroundColor: const Color(0xFF6C63FF).withAlpha(50),
+                            backgroundColor:
+                                const Color(0xFF6C63FF).withAlpha(50),
                             side: const BorderSide(color: Color(0xFF6C63FF)),
-                            label: Text(s.wireName, style: const TextStyle(fontSize: 12, color: Colors.white)),
+                            label: Text(s.wireName,
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.white)),
                           );
                         }).toList(),
                       ),
@@ -462,8 +527,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
             // On-Device Capture Pipeline Showcase
             const Text(
-              'ON-DEVICE VISION CAPTURE & OCR PIPELINE (§4.6)',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white54, letterSpacing: 1.1),
+              'SCRIBBLE CROP PROTOTYPE (§4.6 · OCR PENDING)',
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white54,
+                  letterSpacing: 1.1),
             ),
             const SizedBox(height: 8),
             Card(
@@ -474,19 +543,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     ElevatedButton.icon(
                       icon: const Icon(Icons.crop_free, size: 18),
-                      label: const Text('Test Scribble Crop + PP-OCR'),
+                      label: const Text('Test Scribble Crop'),
                       onPressed: _isLoading ? null : _testCapture,
                     ),
                     if (_lastCapture != null) ...[
                       const Divider(height: 24, color: Color(0xFF2E334D)),
                       Text(
                         'Extracted Text: "${_lastCapture!.ocrText}"',
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Confidence: ${(_lastCapture!.ocrConfidence * 100).toStringAsFixed(1)}% · Rectified Image: ${_lastCapture!.rectifiedImagePath}',
-                        style: const TextStyle(fontSize: 11, color: Colors.white54),
+                        style: const TextStyle(
+                            fontSize: 11, color: Colors.white54),
                       ),
                     ],
                   ],
@@ -515,10 +586,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             Icon(icon, color: color, size: 22),
             const SizedBox(height: 8),
-            Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+            Text(value,
+                style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white)),
             const SizedBox(height: 2),
-            Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white70)),
-            Text(subtitle, style: const TextStyle(fontSize: 10, color: Colors.white38)),
+            Text(title,
+                style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white70)),
+            Text(subtitle,
+                style: const TextStyle(fontSize: 10, color: Colors.white38)),
           ],
         ),
       ),
@@ -532,18 +612,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: granted ? const Color(0xFF4CAF50).withAlpha(40) : const Color(0xFFF44336).withAlpha(40),
+          color: granted
+              ? const Color(0xFF4CAF50).withAlpha(40)
+              : const Color(0xFFF44336).withAlpha(40),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: granted ? const Color(0xFF4CAF50) : const Color(0xFFF44336)),
+          border: Border.all(
+              color:
+                  granted ? const Color(0xFF4CAF50) : const Color(0xFFF44336)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(granted ? Icons.check_circle : Icons.warning_amber, size: 14, color: granted ? const Color(0xFF4CAF50) : const Color(0xFFF44336)),
+            Icon(granted ? Icons.check_circle : Icons.warning_amber,
+                size: 14,
+                color: granted
+                    ? const Color(0xFF4CAF50)
+                    : const Color(0xFFF44336)),
             const SizedBox(width: 6),
             Text(
               title,
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: granted ? const Color(0xFF4CAF50) : const Color(0xFFF44336)),
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: granted
+                      ? const Color(0xFF4CAF50)
+                      : const Color(0xFFF44336)),
             ),
           ],
         ),

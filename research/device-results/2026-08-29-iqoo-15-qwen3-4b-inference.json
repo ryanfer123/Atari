@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "stage": "full_model_inference",
+  "capturedAt": "2026-08-29",
+  "device": {
+    "brand": "iQOO",
+    "marketingName": "iQOO 15",
+    "model": "I2501",
+    "androidVersion": "16",
+    "apiLevel": 36,
+    "abi": "arm64-v8a",
+    "ramBytes": 15959269376
+  },
+  "runtime": {
+    "name": "llama.cpp Android example",
+    "revision": "d7bd3bfcad3e29c7e49fd26f38c79ee3e9a3fd6b",
+    "backend": "libggml-cpu-android_armv9.2_2.so",
+    "threads": 4
+  },
+  "model": {
+    "name": "Qwen3-4B Q4_K_M",
+    "parameters": 4020000000,
+    "fileBytes": 2497280256,
+    "sha256": "7485fe6f11af29433bc51cab58009521f205840f5b4ae3a32fa7f92e8534fdf5",
+    "format": "GGUF V3",
+    "license": "Apache-2.0"
+  },
+  "prompt": {
+    "characters": 266,
+    "mode": "no_think",
+    "contract": "exactly one supportive sentence, at most 28 words"
+  },
+  "runs": [
+    {
+      "contextTokens": 8192,
+      "loadToInferenceStartMs": 14661,
+      "generationElapsedMs": 5988,
+      "output": "The app switching is slightly higher than typical for this time of day.",
+      "contractValid": true,
+      "memoryAfterInference": {
+        "pssKiB": 5187701,
+        "rssKiB": 4946560,
+        "swapPssKiB": 390499
+      },
+      "kvCacheMiB": 1152.0
+    },
+    {
+      "contextTokens": 1024,
+      "loadToInferenceStartMs": 12702,
+      "generationElapsedMs": 29500,
+      "output": "The app switching is slightly higher than typical for this time of day.",
+      "contractValid": true,
+      "memoryAfterInference": {
+        "pssKiB": 5151429,
+        "rssKiB": 4510888,
+        "swapPssKiB": 797488
+      },
+      "kvCacheMiB": 144.0
+    }
+  ],
+  "conclusion": {
+    "runtimeCompatibility": "passed",
+    "outputContract": "passed",
+    "defaultResidentModelGate": "failed_pending_smaller_model_comparison",
+    "reason": "The 4B model produced valid output, but consumed about 4.5-4.9 GiB RSS and showed unstable 6.0-29.5 second generation latency with substantial swap. It should not remain resident alongside OCR and embedding models without further measurement."
+  },
+  "limitations": [
+    "This is a two-run engineering gate, not a statistically sufficient latency benchmark.",
+    "Time-to-first-token and exact token throughput were not instrumented in this harness revision.",
+    "The second run followed other heavy build and inference activity, so its higher swap and latency must not be attributed to context size alone.",
+    "Airplane mode was not enforced during these two runs; the runtime itself used only a private local GGUF file."
+  ]
+}

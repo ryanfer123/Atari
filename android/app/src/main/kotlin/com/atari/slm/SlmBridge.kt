@@ -5,12 +5,14 @@ package com.atari.slm
  */
 object SlmBridge {
 
+    val isNativeContractAvailable: Boolean
+
     init {
-        try {
+        isNativeContractAvailable = try {
             System.loadLibrary("atari_model_jni")
+            true
         } catch (e: UnsatisfiedLinkError) {
-            // In unit test or environment where native library is not yet packaged,
-            // fallback implementations in Kotlin will execute seamlessly.
+            false
         }
     }
 

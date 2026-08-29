@@ -41,10 +41,10 @@ class SlmPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
                 val contextSources = rawBullets.map { it["source"] ?: "" }.toTypedArray()
                 val contextTexts = rawBullets.map { it["text"] ?: "" }.toTypedArray()
 
-                // Generate or compute fallback explanation
-                var fallbackText: String
-                try {
-                    fallbackText = SlmBridge.nativeFallbackText(
+                // The native safety contract is packaged independently from model inference.
+                // Until the llama.cpp adapter is connected, always return an explicit fallback.
+                val fallbackText = try {
+                    SlmBridge.nativeFallbackText(
                         fragmentationScore,
                         appSwitchZ,
                         unlockZ,
@@ -52,7 +52,7 @@ class SlmPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
                         timeBucket
                     )
                 } catch (e: UnsatisfiedLinkError) {
-                    fallbackText = generateKotlinFallback(appSwitchZ, unlockZ, notifZ, timeBucket)
+                    generateKotlinFallback(appSwitchZ, unlockZ, notifZ, timeBucket)
                 }
 
                 // If context bullets exist, format final output
@@ -60,7 +60,7 @@ class SlmPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
                     "text" to fallbackText,
                     "contextBullets" to rawBullets,
                     "usedModel" to false,
-                    "fallbackReason" to "deterministic_safety_contract"
+                    "fallbackReason" to "model_runtime_not_connected"
                 )
                 result.success(explanationResult)
             }
@@ -78,14 +78,24 @@ class SlmPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
 
                 val response = mapOf(
                     "selectedSources" to selectedSources,
-                    "reasoning" to "Masked selection prioritised $topSignal relevant sources (cap: $maxCalls)",
-                    "usedModel" to true
+                    "reasoning" to "Deterministic source fallback for $topSignal (cap: $maxCalls); model runtime not connected",
+                    "usedModel" to false
                 )
                 result.success(response)
             }
 
             "isModelReady" -> {
-                result.success(true)
+                result.success(false)
+            }
+
+            "getRuntimeStatus" -> {
+                result.success(
+                    mapOf(
+                        "nativeContractReady" to SlmBridge.isNativeContractAvailable,
+                        "modelRuntimeReady" to false,
+                        "modelId" to null
+                    )
+                )
             }
 
             else -> result.notImplemented()
