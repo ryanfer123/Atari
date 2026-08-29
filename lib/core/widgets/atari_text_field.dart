@@ -19,7 +19,7 @@ class AtariTextField extends StatelessWidget {
     
     // Atari Glassmorphism Theme Rules
     final Color textColor = isDark ? AtariTheme.primaryYellow : Colors.black;
-    final Color glowColor = isDark ? AtariTheme.primaryYellow : Colors.white;
+    final Color glowColor = AtariTheme.primaryYellow; // Yellow accents in both themes
 
     final border = OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),

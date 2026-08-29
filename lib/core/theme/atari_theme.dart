@@ -36,11 +36,12 @@ class AtariTheme {
         surface: darkSurface,
       ),
       textTheme: _buildTextTheme(base.textTheme, Colors.white),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
-        iconTheme: IconThemeData(color: primaryYellow),
+        iconTheme: const IconThemeData(color: primaryYellow),
+        titleTextStyle: GoogleFonts.orbitron(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
       ),
       cardTheme: CardThemeData(
         color: Colors.white.withOpacity(0.05), // Glassmorphism base
@@ -80,12 +81,12 @@ class AtariTheme {
         surface: lightSurface,
       ),
       textTheme: _buildTextTheme(base.textTheme, Colors.black87),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
-        iconTheme: IconThemeData(color: Colors.black87),
-        titleTextStyle: TextStyle(color: Colors.black87),
+        iconTheme: const IconThemeData(color: Colors.black87),
+        titleTextStyle: GoogleFonts.orbitron(color: Colors.black87, fontSize: 22, fontWeight: FontWeight.bold),
       ),
       cardTheme: CardThemeData(
         color: Colors.white.withOpacity(0.1), // Glassmorphism base

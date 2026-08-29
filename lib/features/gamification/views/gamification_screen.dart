@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import '../../../core/widgets/atari_card.dart';
 import '../../../core/theme/atari_theme.dart';
 
@@ -8,7 +9,11 @@ class GamificationScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final glowColor = isDark ? AtariTheme.primaryYellow : Colors.white;
+    final glowColor = AtariTheme.primaryYellow; // Using the fixed Yellow for both themes
+
+    // TODO: Wire these to real state
+    const int totalActiveDays = 0;
+    const int daysSinceLastActive = 0;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -51,13 +56,34 @@ class GamificationScreen extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.local_fire_department_outlined, size: 28),
+                  // Shared bounding box to guarantee identical centering
+                  SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: totalActiveDays == 0
+                        ? const Align(
+                            alignment: Alignment.bottomCenter, // Align to bottom so bases match
+                            child: Icon(Icons.local_fire_department_outlined, size: 28),
+                          )
+                        : Align(
+                            alignment: Alignment.bottomCenter, // Align to bottom so bases match
+                            child: Lottie.asset(
+                              daysSinceLastActive == 0 
+                                  ? 'assets/lotties/red_flame.json' 
+                                  : 'assets/lotties/blue_flame.json',
+                              key: ValueKey(daysSinceLastActive == 0 ? 'red' : 'blue'),
+                              width: 38, // Slightly bigger than the 28px static icon
+                              height: 38,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                  ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('You\'ve been active on 0 days', style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text('You\'ve been active on $totalActiveDays days', style: const TextStyle(fontWeight: FontWeight.bold)),
                         const SizedBox(height: 4),
                         Text(
                           'This only ever goes up. A quiet day pauses it - it never resets.',

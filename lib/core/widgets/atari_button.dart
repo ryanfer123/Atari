@@ -21,23 +21,20 @@ class AtariButton extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     // Explicit Fix: 
-    // Dark Theme -> Black Buttons
-    // Light Theme -> Yellow Buttons
+    // Dark Theme -> Black base
+    // Light Theme -> White base
     final Color baseColor = isDark 
         ? Colors.black 
-        : AtariTheme.primaryYellow;
+        : Colors.white;
 
-    // Dark Theme (Black Button) -> Yellow Text
-    // Light Theme (Yellow Button) -> Black Text
+    // Dark Theme -> Yellow Text
+    // Light Theme -> Black Text
     final Color textColor = isDark 
         ? AtariTheme.primaryYellow 
         : Colors.black;
 
-    // Dark Theme (Black Button) -> Yellow Glow
-    // Light Theme (Yellow Button) -> White Glow
-    final Color glowColor = isDark
-        ? AtariTheme.primaryYellow
-        : Colors.white;
+    // Both themes get Yellow glow/accents for iQOO branding
+    final Color glowColor = AtariTheme.primaryYellow;
     
     return GestureDetector(
       onTap: onPressed,
@@ -59,13 +56,14 @@ class AtariButton extends StatelessWidget {
                 radius: 1.5,
                 colors: [
                   Colors.transparent, // Transparent/base color in the center
-                  glowColor.withOpacity(0.3), // Light radiating inward from edges
+                  // Reduced opacity so the interior stays mostly dark/light and text remains legible
+                  glowColor.withOpacity(0.1), 
                 ],
               ),
               
               // Sharp glass border matching the glow
               border: Border.all(
-                color: glowColor.withOpacity(isSecondary ? 0.3 : 0.6),
+                color: glowColor.withOpacity(isSecondary ? 0.3 : 0.8),
                 width: 1.5,
               ),
             ),

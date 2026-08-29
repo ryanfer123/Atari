@@ -19,9 +19,9 @@ class AtariCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     // Atari Glassmorphism Theme Rules
-    final Color baseColor = isDark ? Colors.black : AtariTheme.primaryYellow;
+    final Color baseColor = isDark ? Colors.black : Colors.white;
     final Color textColor = isDark ? AtariTheme.primaryYellow : Colors.black;
-    final Color glowColor = isDark ? AtariTheme.primaryYellow : Colors.white;
+    final Color glowColor = AtariTheme.primaryYellow; // Yellow glow for both themes
     
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
@@ -41,7 +41,8 @@ class AtariCard extends StatelessWidget {
               radius: 1.5,
               colors: [
                 Colors.transparent, 
-                glowColor.withOpacity(0.15), 
+                // Reduced intensity so background contrast remains strong
+                glowColor.withOpacity(0.05), 
               ],
             ),
             

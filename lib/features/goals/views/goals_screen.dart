@@ -10,7 +10,11 @@ class GoalsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final glowColor = isDark ? AtariTheme.primaryYellow : Colors.white;
+    
+    final indicatorColor = AtariTheme.primaryYellow;
+    final labelColor = isDark ? AtariTheme.primaryYellow : Colors.black;
+    final unselectedColor = isDark ? AtariTheme.primaryYellow.withOpacity(0.5) : Colors.black54;
+    final dividerColor = isDark ? AtariTheme.primaryYellow.withOpacity(0.2) : Colors.black12;
 
     return DefaultTabController(
       length: 3,
@@ -19,10 +23,10 @@ class GoalsScreen extends StatelessWidget {
         appBar: AppBar(
           title: const Text('Goals'),
           bottom: TabBar(
-            indicatorColor: glowColor,
-            labelColor: glowColor,
-            unselectedLabelColor: glowColor.withOpacity(0.5),
-            dividerColor: glowColor.withOpacity(0.2),
+            indicatorColor: indicatorColor,
+            labelColor: labelColor,
+            unselectedLabelColor: unselectedColor,
+            dividerColor: dividerColor,
             tabs: const [
               Tab(text: 'Tasks'),
               Tab(text: 'Notes'),
