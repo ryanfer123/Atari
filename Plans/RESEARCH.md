@@ -1,7 +1,7 @@
 # Research Brief — On-Device Overload Agent
 **iQOO City Battles 2026 · Open Innovation track · 7-day window (30h city battle + prep)**
 
-Ledger: `/tmp/claude-1000/-home-mahmood-Projects-iQOO/89d85140-bcad-4ae2-a9e0-1565c9856c06/scratchpad/ml-intern/on-device-overload-detection-agent.md` (78 rows across 7 clusters — phone-signal sensing, on-device SLMs, JITAI/nudge effectiveness, bandit personalization/low-N classifiers, on-device embedding models, personal RAG/goal-grounded assistants, context/calendar-aware interventions — plus Dotsin's verified papers; arXiv + HF Papers only, resumable)
+Ledger: `/tmp/claude-1000/-home-mahmood-Projects-iQOO/89d85140-bcad-4ae2-a9e0-1565c9856c06/scratchpad/ml-intern/on-device-overload-detection-agent.md` (78 rows across 7 clusters — phone-signal sensing, on-device SLMs, JITAI/nudge effectiveness, bandit personalization/low-N classifiers, on-device embedding models, personal RAG/goal-grounded assistants, context/calendar-aware interventions — plus Dotsin's verified papers; arXiv + HF Papers only, resumable). A second ledger covers the gamified capture-to-organize expansion (85 rows across 4 clusters — freeform selection + document rectification, on-device OCR/VLM document parsing, on-device image embedding models, gamification/habit-formation effectiveness + wellbeing tension) at `/tmp/claude-1000/-home-mahmood-Projects-iQOO/89d85140-bcad-4ae2-a9e0-1565c9856c06/scratchpad/ml-intern/gamified-capture-organize-layer.md`. A third ledger covers the flagship-hardware agentic upgrade (91 rows across 3 clusters — flagship-capable agentic/tool-calling models, small-model multi-step tool-orchestration reliability, concurrent multi-model serving on 16GB RAM) at `/tmp/claude-1000/-home-mahmood-Projects-iQOO/89d85140-bcad-4ae2-a9e0-1565c9856c06/scratchpad/ml-intern/flagship-agentic-upgrade.md`.
 
 ---
 
@@ -411,6 +411,304 @@ existing SlmExplainer, just richer input, not a new component.
 
 ---
 
+## Expansion: gamified capture-to-organize layer
+
+Two more additions on top of the goal-context layer above: a **freeform, Google-Lens-style capture
+flow** (the user draws a loose shape over a photographed page or on-screen content, the app turns that
+into a clean crop and extracts structured items), and a **gamification layer** (XP, levels, quests,
+streaks, achievements) combining "addictiveness" with organization — Habitica-style engagement applied
+to the app's existing todo/note/health-target model. This section covers what the literature actually
+supports for each, and is deliberately blunt about the one place it argues *against* the direction
+asked for: gamification sits in real tension with this app's own anti-overload mission, and the
+literature does not resolve that tension cleanly. Ledger: 85 rows across 4 clusters (A: freeform
+selection + document rectification, B: on-device OCR/VLM document parsing, C: on-device image embedding
+models, D: gamification/habit-formation effectiveness + wellbeing tension), same ledger location
+pattern as before.
+
+### Freeform capture: no single paper solves "circle it, get a clean image" — compose two models
+
+Nothing in the survey does loose-scribble-to-clean-crop as one studied task. The closest matches are
+interactive-segmentation models (scribble/click prompts to a mask) and, separately, document
+rectification models (perspective correction for a photographed page) — the pipeline has to compose
+one of each:
+
+- **EdgeSAM** (arXiv:2312.06660, Dec 2023) distills SAM's ViT encoder into a purely CNN-based
+  architecture explicitly optimized for edge devices — the most concretely edge-targeted, released-code
+  (github.com/chongzhou96/EdgeSAM) option for turning a loose scribble/click into a clean mask.
+  **SqueezeSAM** (arXiv:2312.06736, Dec 2023, Meta Reality Labs) is the closest match to the *exact*
+  product scenario — a mobile interactive-segmentation model built specifically for a phone camera app
+  taking arbitrary loose user input — but has no released weights found, so it's a design reference, not
+  a drop-in model. TinySAM, RepViT-SAM, and EfficientSAM are viable alternates in the same family if
+  EdgeSAM's accuracy/speed tradeoff doesn't fit after Day-1-of-this-workstream testing.
+- **DocScanner** (arXiv:2110.14968, Oct 2021, code released) rectifies a photographed page via
+  progressive, iterative refinement of a shared lightweight module rather than one-shot regression — the
+  best-fit dewarping stage for a photographed whiteboard/notebook page at an angle. This step only
+  applies to camera-photo captures; a pure in-app screenshot region is already flat and skips it
+  entirely.
+- **No paper reports real Android NPU latency for any of these** — every "mobile" SAM variant benchmarks
+  FLOPs/GPU timing, not measured on-device ms-latency, and the same is true of every rectification
+  network found. This is the same coverage gap the project already carries for the SLM (RESEARCH.md
+  "Coverage gaps" above) — treat it as confirmation of a project-wide pattern, not a new surprise: every
+  on-device model choice here needs first-party latency verification before it's trusted, not just the
+  language model.
+
+### OCR / structured extraction: classical OCR wins on deployability, VLM wins on layout understanding
+
+- **PP-OCRv5** (arXiv:2603.24373, Mar 2026, ~5M params) and **PP-OCRv6** (arXiv:2606.13108, Jun 2026,
+  1.5-34.5M params) are tiny, deployable, and the right MVP pick for pulling raw text off a photographed
+  schedule or list — both explicitly claim to rival billion-parameter VLMs on OCR tasks at a fraction of
+  the size.
+- **PaddleOCR-VL** (arXiv:2510.14528, Oct 2025, 0.9B params) is the upgrade path if flat OCR text loses
+  too much of a timetable's row/column structure — a sub-1B document-parsing VLM, SOTA on OmniDocBench,
+  purpose-built for tables/formulas/charts, not just running text.
+- **Donut** (arXiv:2111.15664, Nov 2021) is a useful architectural reference, not the pick: an
+  OCR-free end-to-end model (reads the image directly, no separate OCR engine) proving the pattern works
+  in principle, but it's 2021-era with no updated on-device numbers.
+- **E-ARMOR** (HF-2509.03615, Sep 2025) is the closest thing found to a direct, controlled comparison of
+  classical edge-optimized OCR against several small/mid VLM-OCR approaches (GOT-OCR2.0, InternVL, Qwen-
+  VL family, MiniCPM) under resource constraints — use it as the evaluation reference when doing
+  Day-1-of-this-workstream testing, rather than trusting any single paper's self-reported numbers.
+
+### Should captured images get their own embedding, or is OCR text + the existing pipeline enough?
+
+Genuine disagreement in the literature, reported both ways rather than smoothed over:
+
+- **For a dedicated image embedding:** Document Screenshot Embedding / DSE (arXiv:2406.11251, Jun 2024)
+  found that embedding a document screenshot directly beats OCR-then-text-embed by 15+ nDCG points on
+  slide retrieval and by 17 points top-1 accuracy vs. BM25 on text-intensive Wiki-SS — for text-and-
+  layout-dense images (which schedules/whiteboards/timetables are), skipping OCR and embedding the image
+  directly can meaningfully win. UniSE/Vis-IR (arXiv:2502.11431, Feb 2025) makes the same architectural
+  argument: treat mixed text/image/table content as one unified "screenshot embedding."
+- **Against (or "not needed"):** CIVIL (arXiv:2510.04010, Oct 2025), on personal first-person photo
+  retrieval, found that generating a caption and embedding it with a text model — i.e., reusing exactly
+  the kind of pipeline this project already has (EmbeddingGemma-300M over text) — works well, and is
+  explicitly framed as the alternative to CLIP-style image embedding.
+- Both DSE and CIVIL make their case with large/server-scale models, not mobile-sized ones — neither
+  result guarantees a small on-device model reproduces the same gap in either direction. PhotoBench
+  (arXiv:2603.01493, Mar 2026) adds a further caution: pure embedding models, image or text, "collapse"
+  on personal-photo retrieval once non-visual context (time, place, social) matters — neither modality
+  alone is a complete answer.
+- **Resolution, stated as a judgment call, not a proven result:** the MVP does **not** add a dedicated
+  image embedder. Captured images are OCR'd, and the OCR text goes into the existing EmbeddingGemma-300M
+  notes pipeline (§ "Expansion: goal-context layer" above) exactly like a typed note. If testing shows
+  OCR text is losing too much of a timetable's structure for retrieval to actually work,
+  **MobileCLIP2** (arXiv:2508.20691, Aug 2025, Apple, 50-150M params, 3-15ms latency, best small
+  on-device CLIP option found in the survey) is the concrete upgrade path — but only build it if the
+  cheaper OCR+text-embedding path is measurably insufficient, not by default.
+
+### Gamification: the literature does not resolve the tension with this app's own mission — treat that as a design constraint, not a feature to bolt on
+
+This is the subsection that matters most, because the app's own stated boundary ("Gamification rewards
+intentional action and recovery, not simply reduced screen time," per the project README) turns out to
+need to be a hard rule, not a nice-to-have — the literature explains why:
+
+- **Direct empirical link between gamified/persuasive design and addictive use.** "Do Persuasive Designs
+  Make Smartphones More Addictive?" (arXiv:2106.02604, Jun 2021, N=183) found persuasive-design elements
+  — which include reward/gamification mechanics — correlate with exactly the problematic-use patterns
+  this app exists to reduce.
+- **The same finding, sharper, on streaks specifically.** "AI-Driven Feedback Loops in Digital
+  Technologies" (arXiv:2411.09706, Oct 2024, N=200) found streaks/badges/real-time feedback
+  *simultaneously* help goal attainment **and** independently increase anxiety, autonomy-loss, and
+  compulsive feedback-checking. This is not a clean win for gamification — it is a genuine, documented
+  double edge, and the paper's own recommendation is to design feedback mechanisms that reduce cognitive
+  load, not maximize engagement.
+- **Manipulative design isn't fixable after the fact.** A Systematic Review of Dark Patterns
+  (arXiv:2604.15323, Mar 2026) is the most rigorous single source here: manipulative UI patterns
+  measurably change behavior (with large effect-size variance), and attempts to de-bias or counter dark
+  patterns once they're in place mostly fail. "Ship it, then add a wellbeing disclaimer" is not a real
+  mitigation by this evidence — the mechanic has to be designed correctly from the start.
+- **The app's core mission doesn't actually need gamification to work.** MindShift (arXiv:2309.16639,
+  already in Core Reading above) — a phone-overload-reduction agent in the same problem space as this
+  app — gets real measured effect sizes (acceptance +4.7 to +22.5pp, usage duration −7.4 to −9.8%) from
+  a *non-gamified*, context-aware persuasion approach. Gamification is being added here for engagement
+  and hackathon-novelty reasons, not because the literature says the anti-overload mechanism requires
+  it — keep that distinction explicit in the pitch rather than implying gamification is load-bearing for
+  the core detection/intervention loop.
+- **Concrete design rule this evidence supports** (logic, built on the findings above, not a citation of
+  its own): reward *completion and effort* — a todo finished, a capture-to-organize action completed, an
+  intervention the feedback loop's own pre/post measurement confirms worked (§4.7) — never reward raw
+  reduced-screen-time or app-avoidance directly, and never use a streak that can be *lost* by a single
+  missed day. "Unpacking Adherence and Engagement in Pervasive Health Games" (arXiv:2106.13747, Jun 2021)
+  ties lasting adherence to Self-Determination Theory constructs (autonomy, relatedness) rather than
+  reward mechanics themselves; "Designing for Engagement" (arXiv:2605.16276, Apr 2026) proposes exactly
+  this SDT-over-raw-mechanics framework for digital health design. Concretely: levels/XP that only go up,
+  and quests that can be re-attempted without penalty, instead of a fragile daily streak.
+- **A realistic adherence number for the pitch, not an oversell.** The same health-games paper
+  (arXiv:2106.13747) cites field retention of only 41% (single-player) / 29% (social) at 90 days even for
+  well-designed gamified health apps — gamification measurably helps engagement, it does not "solve" it.
+- **A concrete self-audit tool before shipping.** "Playing Games with My Heart" (arXiv:2605.08093, Apr
+  2026) audits popular AI companion apps for manipulative-engagement dark patterns via a repeatable
+  manual-annotation methodology. Before shipping the gamification layer, run the same style of self-audit
+  against this app's own streak/XP/notification copy, using the taxonomy from "Dark Patterns at Scale"
+  (arXiv:1907.07032) as the checklist — treat any mechanic that would fail that audit as a bug, not a
+  feature. See IMPLEMENTATION.md §4.7 for where this lands as an actual pre-ship task.
+- **Coverage note, stated honestly:** arXiv/HF indexes almost none of the core gamification/
+  Self-Determination-Theory/streak-mechanics literature — it lives in ACM CHI/HCI proceedings, outside
+  this skill's arXiv+HF-Papers scope. Several exact-phrase queries ("variable ratio reinforcement,"
+  "streak mechanic behavior change," "gamification randomized controlled trial app") returned zero hits.
+  The adherence-effect-size evidence above is real but drawn from adjacent domains (health games, social
+  media, digital-stress interventions), not to-do/habit apps specifically — treat it as directional
+  support, not a tight domain match.
+
+---
+
+## Expansion: flagship-hardware agentic upgrade
+
+The actual demo/dev hardware is confirmed as an **iQOO flagship phone: 16GB RAM, Snapdragon-class
+NPU, 512GB storage** — not the generic/unknown "loaner device" the original SLM budget (Gemma 3 1B)
+was conservatively sized for. This section covers what changes given that headroom, what deliberately
+does *not* change, and — because "agentic" is where this survey found the sharpest evidence against
+the naive version of the idea — why the upgrade is scoped as **constrained, code-governed tool
+selection**, not a free-form multi-step agent loop. Ledger: 91 rows across 3 clusters (flagship-capable
+agentic/tool-calling models, small-model multi-step tool-orchestration reliability, concurrent
+multi-model serving on 16GB RAM).
+
+### What does *not* change, and why hardware doesn't affect it
+
+- **The Tier 1 rule-based classifier stays rule-based.** That decision was justified by *labeled-data
+  scarcity* — arXiv:2302.02334's O(log n) vs. O(n) sample-complexity result, at this project's ~1-week
+  personal-baseline data scale — not by compute or memory limits. More RAM doesn't create more labeled
+  "was I overloaded" ground truth. This argument is orthogonal to hardware and still holds.
+- **Cross-source fusion is still out of scope.** Setoka and Claw-Anything (§Expansion: goal-context
+  layer above) show even frontier cloud models fail at open-ended multi-source personal-data reasoning
+  (34.5% pass@1) — a 4-8B on-device model is nowhere near frontier scale, so this conclusion doesn't
+  soften with better hardware, it strengthens the case for staying disciplined about it.
+- **The zero-`INTERNET`-permission core loop is unaffected.** The upgraded model and orchestration logic
+  described below still run entirely on-device.
+
+### Model choice: Qwen3-4B primary, Qwen3-8B as a measured upgrade, Gemma 3 4B as the GGUF-path alternate
+
+- **Qwen3-4B is the primary pick.** It sits inside the size band "Are We There Yet?" (arXiv:2504.00002,
+  a real-device measurement study) found actually runs successfully on mobile today — the same study
+  found larger models "fail or are impractical" on-phone, a direct caution against defaulting to the
+  top of the budget just because RAM allows it. Within that band, Qwen3-4B carries real evidence of
+  agentic capability, not just chat quality: MidTool (arXiv:2608.20314) mid-trains Qwen3-4B specifically
+  for tool-use and improves it on BFCL/tau2-Bench; ToolRM (HF-2510.26167) shows a 4B Qwen3 functioning
+  as an effective function-calling *judge*, evidence of strong native tool-call understanding at this
+  size; the speculator-RL paper (arXiv:2607.25816) lifts Qwen3-4B's tool-call Hit@1 from 44.1% to 61.2%
+  with additional training.
+- **Qwen3-8B is a measured upgrade path, not the default.** It has the single strongest accuracy number
+  in the whole survey — UniToolCall (HF-2604.11557) fine-tunes Qwen3-8B to 93.0% tool-call precision,
+  beating GPT/Gemini/Claude on that eval, and DIVE/Klear-AgentForge independently push Qwen3-8B to SOTA
+  agentic-benchmark results — but no source validates an 8B model's *peak RAM* alongside the embedder
+  and vision pipeline running concurrently (see "Concurrent serving" below), and it sits above the size
+  band "Are We There Yet?" confirms as reliable on real phones today. **Only move to 8B if Day-1 device
+  testing on the actual iQOO flagship shows real headroom** — treat this as a literal test, not an
+  assumption, the same discipline the original 1B-vs-larger decision already used.
+- **Gemma 3 4B/12B (arXiv:2503.19786, official technical report) is the alternate** if the Qwen3 GGUF/
+  tool-calling integration path proves harder than Gemma's — the existing SLM harness (PhoneLM fork,
+  llama.cpp JNI) is already built around Gemma-family GGUF loading, so staying in-family is lower
+  integration risk. **Stated plainly: no arXiv/HF source in this survey confirms Gemma 3 4B/12B's
+  function-calling benchmarks or a GGUF quantized release** — that data likely exists in Google's own
+  model card/blog posts, outside this skill's arXiv+HF-Papers scope. Qwen3's technical report
+  (arXiv:2505.09388) and quantization study (arXiv:2505.02214) are more thoroughly documented for this
+  exact question, which is the deciding factor for the primary pick.
+- **Honest coverage gap, stated as plainly as the original 1B latency gap was:** no paper in this survey
+  benchmarks a 7B+ model's end-to-end chat/agent tokens-per-second on an actual **phone-class** Snapdragon
+  8-Gen/Elite NPU. The closest real numbers are Transformer-Lite (arXiv:2403.20041, 6B-class ChatGLM2 on
+  phone *GPU*, 14 tok/s decode — not NPU), mllm-NPU (arXiv:2407.05858, >1000 tok/s but *prefill only*,
+  chipset not confirmed as Snapdragon), and the Snapdragon *X Elite* RAG paper (arXiv:2606.11257) — a
+  laptop/PC NPU, not the phone Hexagon NPU this project actually targets. **This is the first real
+  measurement question for Day 1 of the upgraded model's testing, exactly like the original Gemma 3 1B
+  latency question was** — budget real device time for it, don't assume any of the above numbers
+  transfer directly.
+
+### Orchestration design: masked, code-governed tool selection — not a free-form multi-step agent loop
+
+This is the most important finding in this section, and it argues for **less** open-endedness than
+"agentic OS AI" might suggest, not more — the evidence against giving even a well-chosen on-device model
+free multi-step tool orchestration is unusually consistent across sources:
+
+- **Raw multi-step orchestration is weak at every scale tested, including frontier cloud models.**
+  HyperTool (arXiv:2606.13663) measured baseline multi-step tool orchestration on MCP-Universe at just
+  **9.93% for Qwen3-8B and 15.69% for Qwen3-32B** — improvable only to ~33-35% via a structural fix
+  (bundling steps into single executable code blocks, not letting the model freely sequence individual
+  calls). Evoflux (arXiv:2606.12674) finds baseline small-planner execution feasibility around **3%**
+  on MCP-Bench, rising to only 17-24% with a self-repair mechanism. TOBench (arXiv:2605.16909) — a
+  benchmark using **Claude Opus 4.6**, a frontier cloud model — gets only **32.0%** success against a
+  94.0% human baseline on closed-loop multi-tool orchestration. OSWorld-MCP (arXiv:2510.24563) finds
+  even o3/Claude Sonnet only achieve ~36.3% *correct tool invocation*. SOPBench (arXiv:2503.08669) and
+  AgentBench (arXiv:2308.03688) both separately confirm 7-8B (and generally sub-70B) models trail
+  frontier-scale models substantially on procedure-following and multi-environment agentic tasks. This
+  is not a small-model problem specifically — it is evidence that open-ended multi-step tool
+  orchestration is a largely unsolved problem at any accessible scale, and an on-device 4-8B model is
+  not where to bet on solving it first.
+- **Constrained, single-turn (or shallow) tool selection is a genuinely different and solved problem at
+  this size.** Octopus (arXiv:2404.01549) and Octopus v2 (HF-2404.01744) fine-tune 2-7B on-device models
+  with *conditional function masking* over a known API set and report they **outperform GPT-4** on
+  function-call accuracy, with Octopus v2 also reporting a 35x latency win over a Llama-7B+RAG baseline.
+  Hammer (HF-2410.04587) reaches SOTA on-device function-calling robustness the same way — masking the
+  candidate function space, not leaving it open. DroidCall (HF-2412.00402) fine-tunes a **3B** model to
+  approach GPT-4o specifically on **Android intent invocation** — the closest direct precedent to this
+  project's own "invoke an internal app tool" use case. TinyAgent (HF-2409.00608) matches GPT-4-Turbo at
+  1.1B-7B by combining fine-tuning with *tool retrieval* — narrowing the candidate set before the model
+  chooses, not choosing freely from everything. The pattern repeats across every positive result found:
+  **small models succeed at tool selection when the candidate set is masked and/or retrieval-narrowed
+  first, and struggle badly the moment they must freely plan a multi-step sequence themselves.**
+- **Two more direct design-pattern supports:** Less-is-More (HF-2411.15399) shows dynamically narrowing
+  the exposed tool set before the model chooses cuts edge execution time ~70% and power ~40%. SMART
+  (arXiv:2502.11435) shows explicitly *gating* whether a tool call happens at all (reducing unnecessary
+  calls 24%) lets a 7B model match 70B-model performance — the win comes from calling less, not
+  reasoning more freely. LLM-as-Code (arXiv:2606.15874) argues directly that deterministic control flow
+  (the loop's sequencing and termination) should live in surrounding code, with the model only filling
+  in well-defined decision points — this is a position/framework paper, not an empirical study, but it
+  matches every empirical result above. ToolGym (arXiv:2601.06328) supports the same shape via a
+  "planner-actor" decomposition that also improved data efficiency for fine-tuning.
+- **Documented failure modes to guard against regardless of design:** hallucinated tool calls (World
+  Modelling, arXiv:2506.02918, proposes outcome-prediction as a mitigation); wrong argument formatting,
+  which IFEval-FC (arXiv:2509.18420) found even SOTA models frequently fail; "similar tool confusion"
+  and "parameter-blind selection" that *worsen* as trajectories get longer (TRAJECT-Bench,
+  arXiv:2510.04550); tool-argument accuracy collapsing 50-64 points moving from curated benchmarks to
+  realistic queries (ToolSense, arXiv:2606.12451); and unbounded/infinite agentic loops with no natural
+  stopping signal (arXiv:2607.01641) — a documented failure mode this project must design against
+  explicitly, not assume away.
+- **Resulting design rule, directly answering the "autonomous orchestration, no OS reach" scope chosen
+  for this upgrade:** the existing code-governed state machine (`Orchestrator`/`FeedbackLoop`/
+  `GamificationEngine`, and the README's own `Sense → Model → Detect → Explain → Intervene → Measure →
+  Adapt` loop) stays exactly that — deterministic control flow in code. What becomes genuinely more
+  agentic: at specific, well-scoped decision points (chiefly, GoalContext retrieval — see
+  IMPLEMENTATION.md §4.5/§4.8), the model chooses from a **small, masked candidate set** (the known
+  GoalContext sources: notes, todos, health targets, calendar, capture history — ≤5 options) rather than
+  the previous fixed "always retrieve from all sources" behavior, with every call schema-validated
+  before execution and a hard cap on chained calls per decision point (falling back to the old flat-
+  bullet behavior if the cap is hit). This is a real increase in autonomy — the model now decides *what
+  it needs to know*, not just how to phrase a fixed input — bounded exactly where the evidence above
+  says on-device models are actually reliable, not where they're evidenced to fail.
+
+### Concurrent multi-model serving: plausible on paper, genuinely untested in the literature
+
+- **Rough RAM math, stated as arithmetic, not a citation:** eDKM (arXiv:2309.00964) compresses a 7B-class
+  model's weights from 12.6GB to 2.5GB at 3-bit; scaling that down, a 4-bit-quantized Qwen3-4B is
+  plausibly ~2-2.5GB of weights, with peak runtime RAM (KV-cache + activations) landing somewhere around
+  3-4GB — MELTing Point (arXiv:2403.12844) and "Are We There Yet?" both stress that inference is
+  memory-bound and peak RAM exceeds weight size for exactly this reason. Add EmbeddingGemma-300M
+  (well under 1GB) and the capture pipeline's vision models (EdgeSAM + DocScanner + PP-OCRv5/6, likely a
+  few hundred MB combined). **Total estimate: roughly 4-6GB peak for all on-device models resident at
+  once** — comfortably inside a 16GB device even accounting for OS and app overhead, on paper.
+- **No paper in this survey validates that math for a phone.** ConsumerBench (arXiv:2506.17538) is the
+  closest direct hit — it explicitly benchmarks multiple concurrent GenAI workloads and finds real
+  resource-contention and unfair-scheduling effects — but it targets consumer *desktop GPU* hardware, not
+  phone NPU. Every other relevant source is either single-model memory-bound analysis (MELTing Point,
+  "Are We There Yet?", MobileQuant) or a server-GPU technique (PagedAttention's KV-cache paging, vLLM)
+  not ported to mobile NPU. **Nothing found tests 3 heterogeneous models (LLM + embedder + vision)
+  resident simultaneously on phone-class hardware.** Treat the RAM estimate above as a plausible
+  starting hypothesis to verify on the actual device, not a settled conclusion.
+- **A real, separate risk even if capacity is sufficient: memory bandwidth, not just RAM capacity.**
+  "AI and Memory Wall" (arXiv:2403.14123) argues memory bandwidth — not compute or even capacity — is
+  the dominant bottleneck for LLM serving generally; three models contending for the same phone's memory
+  bus could slow each other down even with 16GB of headroom to spare. This is a distinct failure mode
+  from OOM and needs its own device-testing pass (concurrent latency under load, not just peak RSS).
+- **Concrete fallback techniques if contention shows up in testing**, ranked by integration cost: (1)
+  EdgeFlow (arXiv:2604.09083) and Execution-State Capsules (arXiv:2606.20537) both report large cold-
+  start/restore speedups (4.07x and 3.9-27x respectively) — useful if the team decides to *swap* models
+  in/out of memory (time-share the NPU) rather than keep all three resident simultaneously; (2) T-MAC
+  (arXiv:2407.00088) offers a CPU-based low-bit inference path — running the vision pipeline on CPU
+  instead of NPU would remove it from NPU contention with the LLM entirely, at a throughput cost; (3)
+  MobileQuant (arXiv:2408.13933, already in the original RESEARCH.md "Also relevant") remains the first
+  lever to try if any single model's own footprint (not cross-model contention) is the bottleneck.
+
+---
+
 ## Open questions / risks
 
 - **Cold start on a loaner/demo phone.** The device you build on for a week won't be the device judges see it on. The Bayesian population-prior blend (concept #3 above) is not optional — it's the only way the demo works on unfamiliar hardware with no usage history.
@@ -420,3 +718,9 @@ existing SlmExplainer, just richer input, not a new component.
 - **Two on-device models loaded simultaneously** (Gemma 3 1B generator + EmbeddingGemma 300M retriever, ~1.3GB combined) is unverified on the loaner Snapdragon device — test concurrent memory pressure on Day 1 alongside the generator-only latency test, not as an afterthought once the goal-context layer is built. Arctic-Embed-XS (22.5M) is the fallback if this is a problem.
 - **"Grounding in goals improves intervention outcomes" is this project's own hypothesis, not a proven literature claim** — the closest study (arXiv:2505.23997) is qualitative-only, N=8. Don't overclaim this in the pitch; frame it as "informed by the literature, validated by our own feedback-loop data," which is both honest and still a strong technical-depth story.
 - **Cross-source fusion is explicitly out of scope** (see "Expansion" section above) — the risk is scope creep during the battle: the temptation to make the SLM "reason across" notes+todos+calendar+health in one open-ended prompt. Resist it; the literature says even frontier models struggle at 34.5% pass@1 on exactly this. Keep retrieval-per-source-type and combine only at the flat-prompt-assembly step.
+- **No paper does freeform-scribble-to-clean-crop + document rectification end-to-end.** Expect to compose an EdgeSAM-class segmentation model with a DocScanner-class rectification model as genuinely first-party integration work, not a model to just download — and budget device-testing time for both, same as the SLM's unverified Snapdragon-latency risk above.
+- **Whether captured images need a dedicated image embedding (MobileCLIP2) or can rely on OCR text through the existing EmbeddingGemma pipeline is a genuine open call, not a settled one.** DSE/UniSE argue dedicated screenshot embedding wins on text-dense images; CIVIL argues caption-then-text-embedding is enough. The MVP defers this and ships OCR+text-embedding only — a dedicated image embedder is a measured upgrade, never a default add.
+- **Gamification is in direct, evidence-backed tension with the app's own anti-overload mission**, and the literature does not resolve this cleanly — arXiv:2411.09706 documents streaks/badges helping attainment *and* independently increasing anxiety and compulsive checking, as one real finding, not two competing ones to pick between. Mitigate with the reward-completion-not-avoidance design rule and the pre-ship dark-patterns self-audit (§ "Expansion: gamified capture-to-organize layer" above) — adding streaks/XP is not "done" until that audit has run.
+- **No paper benchmarks a 7B+ agentic model's real end-to-end chat/agent latency on an actual phone-class Snapdragon 8-Gen/Elite NPU.** The closest numbers are phone-*GPU* (not NPU), NPU-*prefill-only* (not decode), or laptop-class Snapdragon X Elite (not the phone Hexagon NPU) — see § "Expansion: flagship-hardware agentic upgrade." Day 1 of testing the upgraded model is the first real measurement, exactly like the original 1B model's latency question.
+- **No paper validates 3 heterogeneous on-device models (agentic LLM + embedder + vision pipeline) running concurrently on phone-class hardware.** The RAM math is plausible (~4-6GB peak estimated vs. 16GB available) but unverified, and memory *bandwidth* contention — a distinct risk from running out of RAM — has no phone-specific evidence either way. Test combined memory pressure and concurrent-load latency directly, not just each model in isolation.
+- **Multi-step tool orchestration is a largely unsolved problem even for frontier cloud models** (32-36% success in the benchmarks cited in § "Expansion: flagship-hardware agentic upgrade," using Claude Opus 4.6/o3/Claude Sonnet). The masked, code-governed tool-selection design in that section is a hard requirement for this project, not a simplified starting point to relax later as the model "proves itself" — the evidence says open-ended orchestration doesn't get more reliable with a slightly bigger on-device model, it stays broken in the same way.
