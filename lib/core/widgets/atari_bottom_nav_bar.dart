@@ -33,7 +33,7 @@ class AtariBottomNavBar extends StatelessWidget {
             borderRadius: BorderRadius.circular(24),
             
             // Translucent interior
-            color: baseColor.withOpacity(0.6), 
+            color: isDark ? baseColor.withOpacity(0.3) : baseColor.withOpacity(0.6), 
             
             // Light radiating INTO the button (Inner Glow)
             gradient: RadialGradient(

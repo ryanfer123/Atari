@@ -26,6 +26,7 @@ class DashboardScreen extends StatelessWidget {
           }
           
           return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
             // Add substantial bottom padding so content isn't hidden behind the floating navbar
             padding: const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 160.0),
             child: Column(

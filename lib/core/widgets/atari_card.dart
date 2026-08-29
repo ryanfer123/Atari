@@ -33,7 +33,9 @@ class AtariCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             
             // Translucent interior
-            color: baseColor.withOpacity(isSecondary ? 0.2 : 0.4), 
+            color: isDark 
+                ? baseColor.withOpacity(isSecondary ? 0.1 : 0.2)
+                : baseColor.withOpacity(isSecondary ? 0.2 : 0.4),
             
             // Inner glow gradient
             gradient: RadialGradient(

@@ -44,12 +44,13 @@ class GoalsScreen extends StatelessWidget {
             }
 
             return Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 160),
+              padding: const EdgeInsets.only(bottom: 160),
               child: TabBarView(
+                physics: const BouncingScrollPhysics(),
                 children: [
-                  _TasksTabView(vm: vm),
-                  _NotesTabView(vm: vm),
-                  _HealthTabView(vm: vm),
+                  Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: _TasksTabView(vm: vm)),
+                  Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: _NotesTabView(vm: vm)),
+                  Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: _HealthTabView(vm: vm)),
                 ],
               ),
             );
@@ -84,6 +85,7 @@ class _TasksTabViewState extends State<_TasksTabView> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const SizedBox(height: 24),
           const Text('New task', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           AtariCard(
@@ -132,6 +134,8 @@ class _TasksTabViewState extends State<_TasksTabView> {
         children: [
           Expanded(
             child: ListView.separated(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.only(top: 24),
               itemCount: widget.vm.todos.length,
               separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
@@ -218,6 +222,7 @@ class _NotesTabViewState extends State<_NotesTabView> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const SizedBox(height: 24),
           const Text('New note', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           AtariCard(
@@ -254,6 +259,8 @@ class _NotesTabViewState extends State<_NotesTabView> {
         children: [
           Expanded(
             child: ListView.separated(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.only(top: 24),
               itemCount: widget.vm.notes.length,
               separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
@@ -324,6 +331,7 @@ class _HealthTabViewState extends State<_HealthTabView> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const SizedBox(height: 24),
           const Text('New health target', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           AtariCard(
@@ -369,6 +377,8 @@ class _HealthTabViewState extends State<_HealthTabView> {
         children: [
           Expanded(
             child: ListView.separated(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.only(top: 24),
               itemCount: widget.vm.healthTargets.length,
               separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (context, index) {

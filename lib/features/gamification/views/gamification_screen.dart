@@ -26,6 +26,7 @@ class GamificationScreen extends StatelessWidget {
           final daysSinceLastActive = vm.daysSinceLastActive;
 
           return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 160),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,

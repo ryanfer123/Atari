@@ -38,7 +38,9 @@ class AtariTheme {
       textTheme: _buildTextTheme(base.textTheme, Colors.white),
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent, // Prevents Material 3 from adding a yellowish tint on scroll
         elevation: 0,
+        shape: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.1), width: 1)), // Bottom border for scrolling disappearance
         centerTitle: false,
         iconTheme: const IconThemeData(color: primaryYellow),
         titleTextStyle: GoogleFonts.orbitron(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
@@ -83,7 +85,9 @@ class AtariTheme {
       textTheme: _buildTextTheme(base.textTheme, Colors.black87),
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent, // Prevents Material 3 from adding a yellowish tint on scroll
         elevation: 0,
+        shape: Border(bottom: BorderSide(color: Colors.black.withOpacity(0.1), width: 1)), // Bottom border for scrolling disappearance
         centerTitle: false,
         iconTheme: const IconThemeData(color: Colors.black87),
         titleTextStyle: GoogleFonts.orbitron(color: Colors.black87, fontSize: 22, fontWeight: FontWeight.bold),

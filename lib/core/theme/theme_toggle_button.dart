@@ -44,6 +44,7 @@ class _ThemeToggleButtonState extends State<ThemeToggleButton> with SingleTicker
     showDialog(
       context: context,
       barrierDismissible: false,
+      useSafeArea: false, // Ensure it covers the top and bottom of the screen
       barrierColor: Colors.transparent, // We use the Scaffold inside to handle background
       builder: (dialogContext) {
         return Scaffold(
@@ -106,7 +107,7 @@ class _ThemeToggleButtonState extends State<ThemeToggleButton> with SingleTicker
         height: 48,
         alignment: Alignment.center,
         child: Lottie.asset(
-          'assets/lotties/toogle.json',
+          'assets/lotties/toggle.json',
           controller: _controller,
           fit: BoxFit.contain,
         ),

@@ -38,6 +38,11 @@ class AtariApp extends StatelessWidget {
             themeAnimationCurve: Curves.easeInOut,
             routerConfig: appRouter,
             debugShowCheckedModeBanner: false,
+            // Use BouncingScrollPhysics globally to prevent Android's StretchOverscrollIndicator
+            // from distorting BackdropFilter glassmorphism effects when overscrolling.
+            scrollBehavior: const MaterialScrollBehavior().copyWith(
+              physics: const BouncingScrollPhysics(),
+            ),
           );
         },
       ),

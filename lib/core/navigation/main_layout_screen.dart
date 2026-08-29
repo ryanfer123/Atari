@@ -24,13 +24,15 @@ class MainLayoutScreen extends StatelessWidget {
           // 2. Draggable Cat (replaces Capture FAB)
           DraggableCatButton(
             onTap: () => context.go('/capture'),
+            bottomInset: 60.0, // Reduced to allow the cat to go further down to the navbar
+            sideInset: 5.0, // Moved inwards by a few pixels
           ),
 
           // 3. Custom Glassmorphic Bottom Navigation Bar
           Positioned(
-            bottom: 24,
-            left: 24,
-            right: 24,
+            bottom: 7.0, // Reduced by ~70% from 24
+            left: 7.0,
+            right: 7.0,
             child: AtariBottomNavBar(
               currentIndex: navigationShell.currentIndex,
               onTap: (index) {

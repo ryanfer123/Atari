@@ -26,6 +26,7 @@ class InsightsScreen extends StatelessWidget {
               : '-';
 
           return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 160),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
