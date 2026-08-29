@@ -188,7 +188,7 @@ class InterventionResult {
 // lib/core/models/explanation.dart
 @immutable
 class Explanation {
-  final String sentence;           // SLM-generated one-liner
+  final String sentence;           // SLM-generated one-liner (Qwen3-4B GGUF)
   final List<ContextBullet> contextBullets;
   final DateTime generatedAt;
 
@@ -202,7 +202,7 @@ class Explanation {
 // lib/core/models/context_bullet.dart
 @immutable
 class ContextBullet {
-  final String source;  // "note" | "todo" | "health" | "calendar"
+  final String source;  // "note" | "todo" | "health" | "calendar" | "capture_history"
   final String text;
 
   const ContextBullet({...});
@@ -645,7 +645,7 @@ lib/features/<feature_name>/
 |---|---|
 | **Camera Screen** | Full-screen camera viewfinder. Capture button. Option to pick from gallery. Output: raw image path. |
 | **Scribble Canvas** | Captured image displayed full-screen. User draws a freeform shape (finger/stylus). Gesture canvas overlaid. "Crop this" button → sends scribble points + image to `ICapturePipelineService.capture()`. |
-| **Processing Screen** | Loading animation (Lottie). "Recognizing text..." status. Shows progress: cropping → dewarping → reading. |
+| **Processing Screen** | Loading animation (Lottie). "Recognizing text..." status. Shows progress: segmenting (EdgeSAM) → dewarping (DocScanner) → OCR reading. |
 | **Review Screen** | Shows: rectified/cropped image preview, extracted text (editable `TextField`), suggested type (Note/Todo/Health Target) as selectable chips, suggested deadline (if detected, editable). User confirms or edits. "Save" → calls `IGoalContextService.createNote/createTodo/createTarget()`. XP award animation triggers on save. |
 
 **ViewModel:** `CaptureViewModel`
@@ -1100,7 +1100,7 @@ sequenceDiagram
 ### 15.3 Final Exit (Post-Integration)
 
 - [ ] All fakes swapped for real implementations
-- [ ] End-to-end flow works on the actual loaner device: detection → explanation → overlay → capture → XP award
+- [ ] End-to-end flow works on the actual iQOO flagship phone (16GB RAM, Snapdragon NPU): detection → explanation → overlay → capture → XP award
 - [ ] All flows work in airplane mode (except calendar)
 - [ ] Demo script (IMPLEMENTATION.md §6) rehearsed and under 4:30
 
