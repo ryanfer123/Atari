@@ -11,10 +11,11 @@ lib/
 │   └── theme/          Design tokens and application theme
 ├── engine/
 │   ├── baseline/       Personal baseline statistics
+│   ├── capture/        Captured-image OCR parsing into structured items
 │   ├── detection/      Fragmentation scoring and thresholds
 │   ├── feedback/       Intervention-response measurement
 │   ├── gamification/   XP, levels, streaks, quests, and achievements
-│   └── orchestration/  Intervention state machine and cooldowns
+│   └── orchestration/  Intervention state machine, cooldowns, and goal-context retrieval
 └── features/
     ├── dashboard/
     ├── focus/
