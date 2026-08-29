@@ -104,6 +104,16 @@ class PlatformSlmService implements ISlmExplainerService {
   Future<Map<String, dynamic>> initRuntime() async {
     try {
       final result = await _methodChannel.invokeMapMethod<String, dynamic>('initRuntime');
+      if (result?['success'] == true) {
+        // Automatically load model from external files directory
+        final modelPath = '/storage/emulated/0/Android/data/com.atari/files/model.gguf';
+        final loadResult = await loadModel(modelPath);
+        if (loadResult['success'] == true) {
+          return {'success': true, 'message': 'GGML init & model loaded'};
+        } else {
+          return {'success': false, 'message': 'GGML init OK, but load failed: ${loadResult['message']}'};
+        }
+      }
       return result ?? {'success': false, 'message': 'null response'};
     } catch (e) {
       return {'success': false, 'message': 'Exception: $e'};
