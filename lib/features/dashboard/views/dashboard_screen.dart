@@ -4,15 +4,16 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../viewmodels/dashboard_viewmodel.dart';
 import '../../../core/models/view_state.dart';
+import '../../../core/widgets/atari_button.dart';
 import '../../../core/theme/theme_toggle_button.dart';
-import '../../../core/theme/space_scaffold.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return SpaceScaffold(
+    return Scaffold(
+      backgroundColor: Colors.transparent, // Background handled by MainLayoutScreen
       appBar: AppBar(
         title: Text('A T A R I', style: Theme.of(context).textTheme.headlineMedium),
         actions: const [
@@ -20,14 +21,15 @@ class DashboardScreen extends StatelessWidget {
           SizedBox(width: 8),
         ],
       ),
-      child: Consumer<DashboardViewModel>(
+      body: Consumer<DashboardViewModel>(
         builder: (context, vm, child) {
           if (vm.state == ViewState.loading) {
             return const Center(child: CircularProgressIndicator());
           }
           
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+            // Add substantial bottom padding so content isn't hidden behind the floating navbar
+            padding: const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 160.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -67,58 +69,22 @@ class DashboardScreen extends StatelessWidget {
                 
                 const SizedBox(height: 32),
                 
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(0),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                    child: OutlinedButton.icon(
-                      onPressed: () => vm.simulateOverload(),
-                      icon: const Icon(Icons.warning_amber_rounded),
-                      label: const Text('SIMULATE OVERLOAD'),
-                    ),
+                AtariButton(
+                  isSecondary: true,
+                  onPressed: () => vm.simulateOverload(),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.warning_amber_rounded),
+                      const SizedBox(width: 8),
+                      const Text('SIMULATE OVERLOAD'),
+                    ],
                   ),
-                ),
-                
-                const SizedBox(height: 48),
-                Text('MODULES', style: Theme.of(context).textTheme.headlineSmall),
-                const SizedBox(height: 16),
-                
-                // Module Grid
-                GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 16,
-                  crossAxisSpacing: 16,
-                  childAspectRatio: 2.5,
-                  children: [
-                    _buildModuleBtn(context, 'Onboarding', '/onboarding'),
-                    _buildModuleBtn(context, 'Focus', '/focus'),
-                    _buildModuleBtn(context, 'Goals', '/goals'),
-                    _buildModuleBtn(context, 'Capture', '/capture'),
-                    _buildModuleBtn(context, 'Gamification', '/gamification'),
-                    _buildModuleBtn(context, 'Insights', '/insights'),
-                    _buildModuleBtn(context, 'Settings', '/settings'),
-                    _buildModuleBtn(context, 'Intervention', '/intervention'),
-                  ],
                 ),
               ],
             ),
           );
         }
-      ),
-    );
-  }
-
-  Widget _buildModuleBtn(BuildContext context, String title, String route) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(0),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: ElevatedButton(
-          onPressed: () => context.go(route),
-          child: Text(title.toUpperCase(), style: Theme.of(context).textTheme.labelLarge?.copyWith(color: Theme.of(context).colorScheme.onPrimary)),
-        ),
       ),
     );
   }

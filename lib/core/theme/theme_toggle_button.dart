@@ -39,20 +39,59 @@ class _ThemeToggleButtonState extends State<ThemeToggleButton> with SingleTicker
     super.dispose();
   }
 
-  void _handleToggle(ThemeProvider themeProvider) {
+  void _handleToggle(ThemeProvider themeProvider) async {
+    // 1. Show the loading interface overlay over the entire app
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.transparent, // We use the Scaffold inside to handle background
+      builder: (dialogContext) {
+        return Scaffold(
+          // This Scaffold will naturally inherit the AnimatedTheme from MaterialApp,
+          // so its background will smoothly crossfade from Old Theme to New Theme!
+          backgroundColor: Theme.of(dialogContext).scaffoldBackgroundColor,
+          body: Center(
+            child: Lottie.asset(
+              'assets/lotties/loading.json',
+              width: 200,
+              height: 200,
+              delegates: LottieDelegates(
+                values: [
+                  ValueDelegate.colorFilter(
+                    ['**'],
+                    value: const ColorFilter.mode(Colors.grey, BlendMode.srcATop),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    // Give the loading animation a tiny moment to mount and appear on screen
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    // 2. Perform the global theme toggle
     themeProvider.toggleTheme();
     
+    // 3. Animate the toggle button (it's hidden under the loading screen, but will be right when we return)
     if (themeProvider.isDarkMode) {
-      // Transitioning to Dark Mode: Play from 0.1 to 0.4
       _controller.value = 0.1;
       _controller.animateTo(0.4, duration: const Duration(milliseconds: 800));
     } else {
-      // Transitioning to Light Mode: Play from 0.6 to 1.0
       _controller.value = 0.6;
       _controller.animateTo(1.0, duration: const Duration(milliseconds: 800)).then((_) {
-        // Silently reset back to Day Idle for the next toggle
         if (mounted) _controller.value = 0.1;
       });
+    }
+
+    // 4. Wait for the background theme transition to finish, plus a little buffer
+    await Future.delayed(const Duration(milliseconds: 1200));
+
+    // 5. Dismiss the loading overlay
+    if (mounted) {
+      Navigator.of(context, rootNavigator: true).pop();
     }
   }
 
