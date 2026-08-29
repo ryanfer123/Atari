@@ -1,10 +1,24 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+
+import 'core/database/app_database.dart';
 import 'core/models/models.dart';
 import 'core/services/platform/platform_capture_service.dart';
 import 'core/services/platform/platform_sensing_service.dart';
 import 'core/services/platform/platform_slm_service.dart';
 import 'core/services/platform/platform_tts_service.dart';
+import 'core/theme/atari_theme.dart';
+import 'engine/baseline/baseline_store.dart';
+import 'engine/detection/overload_detector.dart';
+import 'engine/feedback/contextual_bandit.dart';
+import 'engine/gamification/gamification_engine.dart';
+import 'engine/orchestration/agent_orchestrator.dart';
+import 'engine/retrieval/goal_context_retriever.dart';
+import 'features/dashboard/dashboard_view.dart';
+import 'features/focus/focus_shield_view.dart';
+import 'features/gamification/gamification_view.dart';
+import 'features/goals/capture_inbox_view.dart';
+import 'features/settings/settings_view.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,624 +33,176 @@ class AtariApp extends StatelessWidget {
     return MaterialApp(
       title: 'ATARI',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0F111A),
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF6C63FF),
-          secondary: Color(0xFFFF6B6B),
-          surface: Color(0xFF1B1E2E),
-        ),
-        cardTheme: CardThemeData(
-          color: const Color(0xFF1B1E2E),
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: Color(0xFF2E334D), width: 1),
-          ),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF6C63FF),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            textStyle:
-                const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-          ),
-        ),
-        useMaterial3: true,
-      ),
-      home: const DashboardScreen(),
+      theme: AtariTheme.dark,
+      home: const AtariShell(),
     );
   }
 }
 
-class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+/// Root navigation shell that wires all services, the orchestrator,
+/// and the four main tabs together.
+class AtariShell extends StatefulWidget {
+  const AtariShell({super.key});
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+  State<AtariShell> createState() => _AtariShellState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
-  final _sensingService = PlatformSensingService();
-  final _slmService = PlatformSlmService();
-  final _ttsService = PlatformTtsService();
-  final _captureService = PlatformCaptureService();
+class _AtariShellState extends State<AtariShell> {
+  // ── Services ──────────────────────────────────────────────────
+  late final PlatformSensingService _sensingService;
+  late final PlatformSlmService _slmService;
+  late final PlatformTtsService _ttsService;
+  late final PlatformCaptureService _captureService;
 
-  SignalSnapshot _snapshot = SignalSnapshot(
-    unlockCount: 0,
-    appSwitchCount: 0,
-    avgNotifLatencyMs: 0.0,
-    windowStart: DateTime.now().subtract(const Duration(minutes: 15)),
-    windowEnd: DateTime.now(),
-  );
+  // ── Engine ────────────────────────────────────────────────────
+  late final AppDatabase _db;
+  late final BaselineStore _baselineStore;
+  late final OverloadDetector _detector;
+  late final ContextualBandit _bandit;
+  late final GoalContextRetriever _goalRetriever;
+  late final GamificationEngine _gamification;
+  late final AgentOrchestrator _orchestrator;
 
-  Map<String, bool> _permissions = {
-    'usageAccess': false,
-    'notificationAccess': false
-  };
-  Explanation? _lastExplanation;
-  SourceSelection? _lastSelection;
-  CaptureResult? _lastCapture;
-  AgentState _agentState = AgentState.normal;
-  bool _isLoading = false;
-  Timer? _refreshTimer;
+  int _currentIndex = 0;
+  bool _engineReady = false;
 
   @override
   void initState() {
     super.initState();
-    _refreshData();
-    _refreshTimer =
-        Timer.periodic(const Duration(seconds: 4), (_) => _refreshData());
+    _initEngine();
+  }
+
+  Future<void> _initEngine() async {
+    // 1. Platform services.
+    _sensingService = PlatformSensingService();
+    _slmService = PlatformSlmService();
+    _ttsService = PlatformTtsService();
+    _captureService = PlatformCaptureService();
+
+    // 2. Database & baseline.
+    _db = AppDatabase();
+    _baselineStore = BaselineStore(_db);
+
+    // 3. Detection engine.
+    _detector = OverloadDetector(_baselineStore);
+
+    // 4. Bandit & retrieval.
+    _bandit = ContextualBandit();
+    _goalRetriever = GoalContextRetriever();
+    _gamification = GamificationEngine();
+
+    // 5. Seed starter quests.
+    _gamification.addQuest(Quest(
+      id: 'first_focus',
+      title: 'First Focus',
+      description: 'Complete your first focus session',
+      targetCount: 1,
+      xpReward: 100,
+    ));
+    _gamification.addQuest(Quest(
+      id: 'organize_3',
+      title: 'Organized Mind',
+      description: 'Capture and organize 3 items',
+      targetCount: 3,
+      xpReward: 150,
+    ));
+
+    // 6. Orchestrator.
+    _orchestrator = AgentOrchestrator(
+      sensingService: _sensingService,
+      slmService: _slmService,
+      ttsService: _ttsService,
+      baselineStore: _baselineStore,
+      detector: _detector,
+      bandit: _bandit,
+      goalRetriever: _goalRetriever,
+      gamification: _gamification,
+    );
+
+    // 7. Listen for overload events to push Focus Shield.
+    _orchestrator.explanationStream.listen(_onExplanation);
+
+    // 8. Start the sensing loop.
+    _orchestrator.start();
+
+    setState(() => _engineReady = true);
+  }
+
+  void _onExplanation(Explanation explanation) {
+    if (!mounted) return;
+    // Push Focus Shield overlay.
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => FocusShieldView(
+        orchestrator: _orchestrator,
+        explanation: explanation,
+        interventionType: _bandit.select(
+          _detector.currentEvent?.topSignal ?? 'app_switches',
+        ),
+      ),
+    ));
   }
 
   @override
   void dispose() {
-    _refreshTimer?.cancel();
+    _orchestrator.dispose();
+    _db.close();
     super.dispose();
-  }
-
-  Future<void> _refreshData() async {
-    final snapshot =
-        await _sensingService.getCurrentSnapshot(windowMinutes: 15);
-    final perms = await _sensingService.checkPermissions();
-    if (mounted) {
-      setState(() {
-        _snapshot = snapshot;
-        _permissions = perms;
-      });
-    }
-  }
-
-  Future<void> _triggerExplanation() async {
-    setState(() => _isLoading = true);
-    final event = OverloadEvent(
-      timestamp: DateTime.now(),
-      signalScores: {
-        'app_switches': (_snapshot.appSwitchCount > 5) ? 3.1 : 1.2,
-        'unlocks': (_snapshot.unlockCount > 3) ? 2.4 : 0.8,
-        'notif_latency_ms': -0.3,
-      },
-      severity: 2.8,
-      topSignal: 'app_switches',
-      baselineContext: 'Saturday afternoon',
-    );
-
-    final bullets = [
-      const ContextBullet(
-          source: 'todo', text: 'CS 301 Lab Assignment (due 4:00 PM)'),
-      const ContextBullet(
-          source: 'health', text: 'Hydration target: 4 of 8 glasses'),
-    ];
-
-    final explanation =
-        await _slmService.generateExplanation(event, contextBullets: bullets);
-    if (mounted) {
-      setState(() {
-        _lastExplanation = explanation;
-        _agentState = AgentState.overloadDetected;
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _runAgenticTooling() async {
-    setState(() => _isLoading = true);
-    final selection = await _slmService.selectSources(
-      triggerSignal: 'app_switches',
-      topSignal: 'app_switches',
-      allowedSources: GoalContextSource.values,
-      maxCalls: 3,
-    );
-
-    if (mounted) {
-      setState(() {
-        _lastSelection = selection;
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _speakExplanation() async {
-    if (_lastExplanation != null) {
-      await _ttsService.speak(_lastExplanation!.sentence);
-    }
-  }
-
-  Future<void> _testCapture() async {
-    setState(() => _isLoading = true);
-    final result = await _captureService.capture(
-      scribblePoints: [
-        {'dx': 40.0, 'dy': 60.0},
-        {'dx': 220.0, 'dy': 180.0},
-      ],
-      sourceImagePath: '/sdcard/sample_schedule.png',
-      origin: 'camera',
-    );
-
-    if (mounted) {
-      setState(() {
-        _lastCapture = result;
-        _isLoading = false;
-      });
-    }
-  }
-
-  Color _getStateColor(AgentState state) {
-    switch (state) {
-      case AgentState.normal:
-        return const Color(0xFF4CAF50);
-      case AgentState.overloadDetected:
-        return const Color(0xFFFF9800);
-      case AgentState.intervening:
-        return const Color(0xFFF44336);
-      case AgentState.cooldown:
-        return const Color(0xFF2196F3);
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final stateColor = _getStateColor(_agentState);
+    if (!_engineReady) {
+      return const Scaffold(
+        backgroundColor: AtariTheme.deepSlate,
+        body: Center(child: CircularProgressIndicator(color: AtariTheme.cyberViolet)),
+      );
+    }
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0F111A),
-        elevation: 0,
-        title: Row(
+      backgroundColor: AtariTheme.deepSlate,
+      body: SafeArea(
+        child: IndexedStack(
+          index: _currentIndex,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFF6C63FF).withAlpha(50),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFF6C63FF)),
-              ),
-              child: const Text('ATARI',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'On-Device Agent',
-                style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white70),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: stateColor.withAlpha(50),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: stateColor),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                          color: stateColor, shape: BoxShape.circle)),
-                  const SizedBox(width: 6),
-                  Text(
-                    _agentState.name.toUpperCase(),
-                    style: TextStyle(
-                        color: stateColor,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
+            DashboardView(orchestrator: _orchestrator),
+            CaptureInboxView(captureService: _captureService),
+            GamificationView(orchestrator: _orchestrator),
+            SettingsView(
+              sensingService: _sensingService,
+              slmService: _slmService,
             ),
           ],
         ),
       ),
-      body: RefreshIndicator(
-        onRefresh: _refreshData,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // Privacy proof banner
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF334155)),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.shield_outlined,
-                      color: Color(0xFF4ADE80), size: 22),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      '100% On-Device · Zero INTERNET Permission Declared',
-                      style: TextStyle(
-                          color: Color(0xFFF1F5F9),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Live Signal Cards
-            const Text(
-              'LIVE BEHAVIOURAL SENSING (METADATA ONLY)',
-              style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white54,
-                  letterSpacing: 1.1),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildMetricCard(
-                    title: 'App Switches',
-                    value: '${_snapshot.appSwitchCount}',
-                    subtitle: '15-min window',
-                    icon: Icons.swap_horiz,
-                    color: const Color(0xFF818CF8),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildMetricCard(
-                    title: 'Unlocks',
-                    value: '${_snapshot.unlockCount}',
-                    subtitle: '15-min window',
-                    icon: Icons.lock_open,
-                    color: const Color(0xFF38BDF8),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildMetricCard(
-                    title: 'Notif Latency',
-                    value: _snapshot.avgNotifLatencyMs > 0
-                        ? '${_snapshot.avgNotifLatencyMs.toInt()}ms'
-                        : 'N/A',
-                    subtitle: 'Avg response',
-                    icon: Icons.notifications_active_outlined,
-                    color: const Color(0xFFF472B6),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Permission Controls
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.security,
-                            color: Color(0xFF6C63FF), size: 20),
-                        SizedBox(width: 8),
-                        Text('System Access Status',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 14)),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _buildPermChip('Usage Access',
-                            _permissions['usageAccess'] ?? false, () {
-                          _sensingService.requestUsagePermission();
-                        }),
-                        _buildPermChip('Notification Listener',
-                            _permissions['notificationAccess'] ?? false, () {
-                          _sensingService.requestNotificationPermission();
-                        }),
-                        OutlinedButton.icon(
-                          icon: const Icon(Icons.add, size: 16),
-                          label: const Text('Simulate Unlock',
-                              style: TextStyle(fontSize: 12)),
-                          onPressed: () async {
-                            await _sensingService.recordSimulatedUnlock();
-                            await _refreshData();
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // On-Device SLM Explanation Section
-            const Text(
-              'SAFE EXPLANATION FALLBACK & OFFLINE TTS (MODEL RUNTIME PENDING)',
-              style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white54,
-                  letterSpacing: 1.1),
-            ),
-            const SizedBox(height: 8),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        ElevatedButton.icon(
-                          icon: const Icon(Icons.bolt, size: 18),
-                          label: const Text('Generate Explanation'),
-                          onPressed: _isLoading ? null : _triggerExplanation,
-                        ),
-                        if (_lastExplanation != null)
-                          IconButton.filledTonal(
-                            icon: const Icon(Icons.volume_up,
-                                color: Color(0xFF6C63FF)),
-                            tooltip: 'Speak Aloud (Offline TTS)',
-                            onPressed: _speakExplanation,
-                          ),
-                      ],
-                    ),
-                    if (_lastExplanation != null) ...[
-                      const Divider(height: 24, color: Color(0xFF2E334D)),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF131622),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFF2E334D)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _lastExplanation!.usedModel
-                                  ? 'MODEL EXPLANATION (1-SENTENCE BOUNDED):'
-                                  : 'DETERMINISTIC SAFE FALLBACK:',
-                              style: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white38),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              '"${_lastExplanation!.sentence}"',
-                              style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFFE2E8F0)),
-                            ),
-                            const SizedBox(height: 10),
-                            const Text('Grounded Context Bullets:',
-                                style: TextStyle(
-                                    fontSize: 11, color: Colors.white60)),
-                            const SizedBox(height: 4),
-                            ..._lastExplanation!.contextBullets.map(
-                              (b) => Padding(
-                                padding: const EdgeInsets.only(bottom: 2),
-                                child: Text('• [${b.source}] ${b.text}',
-                                    style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Color(0xFF94A3B8))),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Masked Agentic Source Selection Section
-            const Text(
-              'BOUNDED SOURCE SELECTION (§4.8 · MODEL RUNTIME PENDING)',
-              style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white54,
-                  letterSpacing: 1.1),
-            ),
-            const SizedBox(height: 8),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        ElevatedButton.icon(
-                          icon: const Icon(Icons.psychology_outlined, size: 18),
-                          label: const Text('Run Masked Tool Selector'),
-                          onPressed: _isLoading ? null : _runAgenticTooling,
-                        ),
-                      ],
-                    ),
-                    if (_lastSelection != null) ...[
-                      const Divider(height: 24, color: Color(0xFF2E334D)),
-                      Text(
-                        _lastSelection!.reasoning,
-                        style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF94A3B8),
-                            fontStyle: FontStyle.italic),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 6,
-                        children: _lastSelection!.sources.map((s) {
-                          return Chip(
-                            backgroundColor:
-                                const Color(0xFF6C63FF).withAlpha(50),
-                            side: const BorderSide(color: Color(0xFF6C63FF)),
-                            label: Text(s.wireName,
-                                style: const TextStyle(
-                                    fontSize: 12, color: Colors.white)),
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // On-Device Capture Pipeline Showcase
-            const Text(
-              'SCRIBBLE CROP PROTOTYPE (§4.6 · OCR PENDING)',
-              style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white54,
-                  letterSpacing: 1.1),
-            ),
-            const SizedBox(height: 8),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.crop_free, size: 18),
-                      label: const Text('Test Scribble Crop'),
-                      onPressed: _isLoading ? null : _testCapture,
-                    ),
-                    if (_lastCapture != null) ...[
-                      const Divider(height: 24, color: Color(0xFF2E334D)),
-                      Text(
-                        'Extracted Text: "${_lastCapture!.ocrText}"',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Confidence: ${(_lastCapture!.ocrConfidence * 100).toStringAsFixed(1)}% · Rectified Image: ${_lastCapture!.rectifiedImagePath}',
-                        style: const TextStyle(
-                            fontSize: 11, color: Colors.white54),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 30),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMetricCard({
-    required String title,
-    required String value,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(height: 8),
-            Text(value,
-                style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white)),
-            const SizedBox(height: 2),
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white70)),
-            Text(subtitle,
-                style: const TextStyle(fontSize: 10, color: Colors.white38)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPermChip(String title, bool granted, VoidCallback onGrant) {
-    return InkWell(
-      onTap: onGrant,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: granted
-              ? const Color(0xFF4CAF50).withAlpha(40)
-              : const Color(0xFFF44336).withAlpha(40),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-              color:
-                  granted ? const Color(0xFF4CAF50) : const Color(0xFFF44336)),
+          color: AtariTheme.surface,
+          border: Border(top: BorderSide(color: AtariTheme.borderSubtle, width: 0.5)),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(granted ? Icons.check_circle : Icons.warning_amber,
-                size: 14,
-                color: granted
-                    ? const Color(0xFF4CAF50)
-                    : const Color(0xFFF44336)),
-            const SizedBox(width: 6),
-            Text(
-              title,
-              style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: granted
-                      ? const Color(0xFF4CAF50)
-                      : const Color(0xFFF44336)),
+        child: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          onTap: (i) => setState(() => _currentIndex = i),
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.dashboard_outlined),
+              activeIcon: Icon(Icons.dashboard),
+              label: 'Dashboard',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.camera_alt_outlined),
+              activeIcon: Icon(Icons.camera_alt),
+              label: 'Capture',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.emoji_events_outlined),
+              activeIcon: Icon(Icons.emoji_events),
+              label: 'Progress',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.settings_outlined),
+              activeIcon: Icon(Icons.settings),
+              label: 'Settings',
             ),
           ],
         ),

@@ -100,6 +100,46 @@ class PlatformSlmService implements ISlmExplainerService {
     }
   }
 
+  /// Initialize the GGML backend. Call once before [loadModel].
+  Future<Map<String, dynamic>> initRuntime() async {
+    try {
+      final result = await _methodChannel.invokeMapMethod<String, dynamic>('initRuntime');
+      return result ?? {'success': false, 'message': 'null response'};
+    } catch (e) {
+      return {'success': false, 'message': 'Exception: $e'};
+    }
+  }
+
+  /// Load a GGUF model file. [contextTokens] controls KV cache size.
+  Future<Map<String, dynamic>> loadModel(String modelPath, {int contextTokens = 1024}) async {
+    try {
+      final result = await _methodChannel.invokeMapMethod<String, dynamic>('loadModel', {
+        'modelPath': modelPath,
+        'contextTokens': contextTokens,
+      });
+      return result ?? {'success': false, 'message': 'null response'};
+    } catch (e) {
+      return {'success': false, 'message': 'Exception: $e'};
+    }
+  }
+
+  /// Unload the current model and free native memory.
+  Future<void> unloadModel() async {
+    try {
+      await _methodChannel.invokeMethod('unloadModel');
+    } catch (_) {}
+  }
+
+  /// Get runtime telemetry (load time, generation speed, TTFT, etc.).
+  Future<Map<String, dynamic>> getRuntimeStatus() async {
+    try {
+      final result = await _methodChannel.invokeMapMethod<String, dynamic>('getRuntimeStatus');
+      return result ?? {};
+    } catch (_) {
+      return {};
+    }
+  }
+
   String _fallbackSentence(OverloadEvent event) {
     switch (event.topSignal) {
       case 'app_switches':

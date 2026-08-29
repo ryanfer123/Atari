@@ -44,4 +44,14 @@ object SlmBridge {
     ): String
 
     external fun nativeParseSourceSelection(jsonResponse: String): IntArray?
+
+    external fun nativeRuntimeInit(nativeLibraryDir: String): Int
+
+    external fun nativeLoadModel(modelPath: String, contextTokens: Int): Int
+
+    external fun nativeGenerate(prompt: String, maxTokens: Int): String
+
+    external fun nativeRuntimeMetrics(): String
+
+    external fun nativeUnloadModel()
 }
