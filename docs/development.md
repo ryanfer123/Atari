@@ -8,18 +8,21 @@ versions will be pinned when the Flutter project is initialized.
 
 ## Local setup
 
-Application initialization has not started. Add verified dependency installation,
-environment configuration, device setup, and launch commands here as they become
-available.
+```sh
+flutter pub get
+dart run build_runner build --delete-conflicting-outputs   # regenerate Drift code after editing lib/core/database
+```
+
+Android device setup and launch commands will be added once `backend-native`
+initializes the Android host and permission flows (see `android/README.md`).
 
 ## Quality checks
 
-Keep one documented command for each routine check:
-
-- formatting
-- linting or static analysis
-- unit and integration tests
-- production build
+- Formatting: `dart format --output=none --set-exit-if-changed lib test`
+- Static analysis: `flutter analyze`
+- Unit tests: `flutter test`
+- Production build: not yet available — no app entrypoint exists until
+  `dev/frontend` builds the app shell.
 
 Prefer wrapper scripts in `scripts/` so local development and continuous
 integration run the same commands.
