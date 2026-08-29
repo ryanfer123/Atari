@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../core/models/models.dart';
@@ -20,16 +21,33 @@ class DashboardView extends StatefulWidget {
 class _DashboardViewState extends State<DashboardView> {
   SignalSnapshot? _latestSnapshot;
   AgentState _agentState = AgentState.normal;
+  bool _slmReady = false;
+  Timer? _slmTimer;
 
   @override
   void initState() {
     super.initState();
+    _checkSlm();
+    _slmTimer = Timer.periodic(const Duration(seconds: 2), (_) => _checkSlm());
     widget.orchestrator.stateStream.listen((state) {
       if (mounted) setState(() => _agentState = state);
     });
     widget.orchestrator.sensingService.snapshotStream.listen((snap) {
       if (mounted) setState(() => _latestSnapshot = snap);
     });
+  }
+
+  Future<void> _checkSlm() async {
+    final ready = await widget.orchestrator.slmService.isReady();
+    if (mounted && ready != _slmReady) {
+      setState(() => _slmReady = ready);
+    }
+  }
+
+  @override
+  void dispose() {
+    _slmTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -186,11 +204,7 @@ class _DashboardViewState extends State<DashboardView> {
           const SizedBox(height: 8),
           _buildStatusRow('Contextual Bandit', true),
           const SizedBox(height: 8),
-          FutureBuilder<bool>(
-            future: widget.orchestrator.slmService.isReady(),
-            builder: (_, snap) =>
-                _buildStatusRow('SLM Runtime', snap.data ?? false),
-          ),
+          _buildStatusRow('SLM Runtime', _slmReady),
         ],
       ),
     );

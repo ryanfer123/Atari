@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../models/models.dart';
@@ -33,22 +34,22 @@ class PlatformSlmService implements ISlmExplainerService {
 
       if (result == null) {
         return Explanation(
-          sentence: _fallbackSentence(event),
+          sentence: 'Behavioral overload detected. Take a short pause.',
           contextBullets: contextBullets,
           generatedAt: DateTime.now(),
           usedModel: false,
-          fallbackReason: 'null_platform_response',
+          fallbackReason: 'channel_returned_null',
         );
       }
 
       return Explanation.fromJson(result);
     } catch (e) {
       return Explanation(
-        sentence: _fallbackSentence(event),
+        sentence: 'Behavioral overload detected. Take a short pause.',
         contextBullets: contextBullets,
         generatedAt: DateTime.now(),
         usedModel: false,
-        fallbackReason: 'platform_exception: $e',
+        fallbackReason: 'channel_exception: $e',
       );
     }
   }
@@ -64,7 +65,7 @@ class PlatformSlmService implements ISlmExplainerService {
       final payload = {
         'triggerSignal': triggerSignal,
         'topSignal': topSignal,
-        'allowedSources': allowedSources.map((s) => s.wireName).toList(),
+        'allowedSources': allowedSources.map((s) => s.name).toList(),
         'maxCalls': maxCalls,
       };
 
@@ -76,7 +77,7 @@ class PlatformSlmService implements ISlmExplainerService {
       if (result == null) {
         return SourceSelection(
           sources: allowedSources.take(maxCalls).toList(),
-          reasoning: 'Fallback: null platform response',
+          reasoning: 'Fallback: null channel response',
           usedModel: false,
         );
       }
@@ -106,12 +107,25 @@ class PlatformSlmService implements ISlmExplainerService {
     try {
       final result = await _methodChannel.invokeMapMethod<String, dynamic>('initRuntime');
       if (result?['success'] == true) {
-        // Automatically load model from internal files directory
-        final directory = await getApplicationSupportDirectory();
-        final modelPath = '${directory.path}/model.gguf';
+        // Automatically load model from internal files directory or candidate paths
+        final supportDir = await getApplicationSupportDirectory();
+        final docsDir = await getApplicationDocumentsDirectory();
+        final candidatePaths = [
+          '${supportDir.path}/model.gguf',
+          '${docsDir.path}/model.gguf',
+          '/data/user/0/com.atari/files/model.gguf',
+          '/data/data/com.atari/files/model.gguf',
+        ];
+        String modelPath = candidatePaths.first;
+        for (final p in candidatePaths) {
+          if (await File(p).exists()) {
+            modelPath = p;
+            break;
+          }
+        }
         final loadResult = await loadModel(modelPath);
         if (loadResult['success'] == true) {
-          return {'success': true, 'message': 'GGML init & model loaded'};
+          return {'success': true, 'message': 'GGML init & model loaded from $modelPath'};
         } else {
           return {'success': false, 'message': 'GGML init OK, but load failed: ${loadResult['message']}'};
         }
@@ -147,8 +161,8 @@ class PlatformSlmService implements ISlmExplainerService {
     try {
       final result = await _methodChannel.invokeMapMethod<String, dynamic>('getRuntimeStatus');
       return result ?? {};
-    } catch (_) {
-      return {};
+    } catch (e) {
+      return {'error': e.toString()};
     }
   }
 

@@ -126,6 +126,9 @@ class _AtariShellState extends State<AtariShell> {
     // 8. Start the sensing loop.
     _orchestrator.start();
 
+    // 9. Auto-initialize and load on-device SLM runtime in background.
+    _slmService.initRuntime();
+
     setState(() => _engineReady = true);
   }
 
