@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 import '../../features/dashboard/views/dashboard_screen.dart';
 import '../../features/onboarding/views/onboarding_screen.dart';
+import '../../features/onboarding/views/splash_screen.dart';
 import '../../features/focus/views/focus_screen.dart';
 import '../../features/goals/views/goals_screen.dart';
 import '../../features/capture/views/capture_screen.dart';
@@ -14,6 +15,10 @@ final appRouter = GoRouter(
   routes: [
     GoRoute(
       path: '/',
+      builder: (context, state) => const SplashScreen(),
+    ),
+    GoRoute(
+      path: '/dashboard',
       builder: (context, state) => const DashboardScreen(),
     ),
     GoRoute(

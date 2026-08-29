@@ -39,6 +39,7 @@ dependencies:
   go_router: ^18.0.0
   lottie: ^3.5.1
   intl: ^0.20.3
+  google_fonts: ^8.2.1
 
 dev_dependencies:
   flutter_test:
@@ -63,7 +64,8 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
+  assets:
+    - assets/lotties/
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 
@@ -92,3 +94,7 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+dependency_overrides:
+  path_provider_foundation: 2.3.2
+
