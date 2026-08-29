@@ -1,0 +1,120 @@
+package com.atari.atari
+
+import android.content.Intent
+import android.os.Bundle
+import android.provider.Settings
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
+import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodChannel
+
+/**
+ * Platform-channel boundary for signal collectors — the Dart-side client
+ * lives in `lib/core/services`. See Plans/IMPLEMENTATION.md §3 (Workstream:
+ * Backend — Native): "Expose every capability above through the
+ * `lib/core/services` platform-channel contract."
+ */
+class MainActivity : FlutterActivity() {
+    private val signalsChannelName = "atari.dev/signals"
+    private val slmChannelName = "atari.dev/slm"
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // Deliberately here, not in AtariApplication.onCreate(): Android
+        // 12+ only allows startForegroundService() from a context it
+        // trusts as foreground-triggering, and Application.onCreate() runs
+        // too early in the process lifecycle to reliably count — it threw
+        // ForegroundServiceStartNotAllowedException in testing on this
+        // device. An Activity's onCreate() is a context Android does
+        // trust.
+        ContextCompat.startForegroundService(this, Intent(this, SignalCollectionService::class.java))
+    }
+
+    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+        super.configureFlutterEngine(flutterEngine)
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, signalsChannelName)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "getUnlockTimestamps" -> {
+                        result.success(UnlockTracker.getUnlockTimestamps(applicationContext))
+                    }
+                    "getUnlockCountSince" -> {
+                        val sinceMillis = (call.argument<Number>("sinceMillis"))?.toLong()
+                        if (sinceMillis == null) {
+                            result.error("missing_argument", "sinceMillis is required", null)
+                        } else {
+                            result.success(UnlockTracker.getUnlockCountSince(applicationContext, sinceMillis))
+                        }
+                    }
+                    "isCollectionServiceRunning" -> {
+                        result.success(SignalCollectionService.isRunning)
+                    }
+                    "hasUsageAccess" -> {
+                        result.success(AppSwitchTracker.hasUsageAccess(applicationContext))
+                    }
+                    "getAppSwitchCountSince" -> {
+                        val sinceMillis = (call.argument<Number>("sinceMillis"))?.toLong()
+                        if (sinceMillis == null) {
+                            result.error("missing_argument", "sinceMillis is required", null)
+                        } else {
+                            result.success(AppSwitchTracker.getAppSwitchCountSince(applicationContext, sinceMillis))
+                        }
+                    }
+                    "openUsageAccessSettings" -> {
+                        startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                        result.success(null)
+                    }
+                    "hasNotificationAccess" -> {
+                        val enabled = NotificationManagerCompat.getEnabledListenerPackages(applicationContext)
+                        result.success(enabled.contains(applicationContext.packageName))
+                    }
+                    "getNotifLatenciesSince" -> {
+                        val sinceMillis = (call.argument<Number>("sinceMillis"))?.toLong()
+                        if (sinceMillis == null) {
+                            result.error("missing_argument", "sinceMillis is required", null)
+                        } else {
+                            result.success(NotifLatencyTracker.getLatenciesSince(applicationContext, sinceMillis))
+                        }
+                    }
+                    "openNotificationAccessSettings" -> {
+                        startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, slmChannelName)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "setModelPath" -> {
+                        val path = call.argument<String>("path")
+                        if (path == null) {
+                            result.error("missing_argument", "path is required", null)
+                        } else {
+                            SlmModelConfig.setModelPath(applicationContext, path)
+                            result.success(null)
+                        }
+                    }
+                    "getModelPath" -> {
+                        result.success(SlmModelConfig.getModelPath(applicationContext))
+                    }
+                    "getModelPathStatus" -> {
+                        result.success(SlmModelConfig.status(applicationContext).toChannelMap())
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+    }
+}
+
+private fun ModelPathStatus.toChannelMap(): Map<String, Any?> =
+    when (this) {
+        ModelPathStatus.NotConfigured -> mapOf("status" to "notConfigured")
+        ModelPathStatus.FileNotFound -> mapOf("status" to "fileNotFound")
+        ModelPathStatus.NotReadable -> mapOf("status" to "notReadable")
+        ModelPathStatus.NotGguf -> mapOf("status" to "notGguf")
+        is ModelPathStatus.LooksValid -> mapOf("status" to "looksValid", "fileSizeBytes" to fileSizeBytes)
+    }

@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "device": {
+    "manufacturer": "vivo",
+    "brand": "iQOO",
+    "marketingName": "iQOO 15",
+    "model": "I2501",
+    "soc": "QTI SM8850",
+    "ramBytes": 15959269376,
+    "androidVersion": "16",
+    "apiLevel": 36,
+    "abi": "arm64-v8a"
+  },
+  "protocol": {
+    "airplaneMode": true,
+    "warmupRuns": 2,
+    "measuredRuns": 10,
+    "maximumOutputTokens": 48,
+    "promptSet": "explanation-evaluation.json",
+    "runtimes": ["llama.cpp", "LiteRT-LM"]
+  },
+  "metrics": [
+    "model_file_bytes",
+    "installed_footprint_bytes",
+    "cold_load_ms",
+    "time_to_first_token_ms",
+    "prompt_tokens_per_second",
+    "generation_tokens_per_second",
+    "peak_resident_memory_bytes",
+    "warm_latency_median_ms",
+    "warm_latency_p95_ms",
+    "battery_delta_percent",
+    "start_temperature_celsius",
+    "end_temperature_celsius",
+    "valid_output_rate",
+    "fallback_rate"
+  ]
+}

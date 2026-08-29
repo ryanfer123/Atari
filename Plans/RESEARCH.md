@@ -56,10 +56,15 @@ evidence chain behind every other component.
    Caveat: 32K context (not the full 128K some Gemma 3 variants advertise) — irrelevant here since prompts are short structured snapshots, not long documents.
 
 6. **PhoneLM: an Efficient and Capable Small Language Model Family through Principled Pre-training** — arXiv:2411.05046, Nov 2024
-   What it does: fully open (weights + code + data) 0.5B/1.5B model family with a working **Android demo app** and an intent-invocation finetune already built.
-   Why it matters here: the only source found with a ready Android LLM harness — fork its demo app's inference plumbing (model loading, threading, GGUF integration) instead of building that scaffolding from zero.
-   Code: github.com/UbiquitousLearning/PhoneLM.
-   Caveat: base capability (0.5B-1.5B) is lighter than Gemma 3 1B for free-text generation quality; use for the harness, Gemma 3 1B for the model.
+   What it does: fully open (weights + code + data) 0.5B/1.5B model family with an Android-oriented function-calling finetune.
+   Why it matters here: useful evidence for phone-oriented small-model design and a possible fallback model family.
+   Code: github.com/UbiquitousLearning/PhoneLM and its separate `mllm` runtime.
+   Caveat: it is not a Gemma/llama.cpp Android harness. Use upstream `ggml-org/llama.cpp/examples/llama.android` for the selected GGUF runtime reference.
+
+6a. **Official Android runtime references** — `ggml-org/llama.cpp` and `google-ai-edge/LiteRT-LM`
+   What they provide: maintained Android model loading, generation, streaming, and benchmark paths; LiteRT-LM also exposes stable Kotlin/C++ APIs and accelerator backends.
+   Why they matter here: these replace the earlier assumption that a PhoneLM application must be forked for Android inference plumbing.
+   Decision: keep ATARI's explanation contract runtime-independent, benchmark both viable paths on the target iQOO device, and retain `llama.cpp` as the initial GGUF integration path.
 
 7. **RadLite: Multi-Task LoRA Fine-Tuning of Small Language Models for CPU-Deployable Radiology AI** — arXiv:2605.00421, May 2026
    What it does: LoRA-tunes a small Qwen model (2.5-4B) to turn *structured findings* into report text, running CPU-only at 1.8-2.4GB, 4-8 tok/s.

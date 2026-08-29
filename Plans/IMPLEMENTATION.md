@@ -230,7 +230,7 @@ RESEARCH.md § "Decision justification" — this table is the summary.
 | Baseline storage | Room (SQLite) | Local-only, no sync, trivial to demo-reset between runs |
 | Classifier | Rule-based Welford z-score, hand-tuned thresholds | O(log n) vs O(n) sample-complexity theory (arXiv:2302.02334) + a direct empirical analog hitting precision=1.00/recall=1.00 at 14-day data scale (arXiv:2604.08581) both favor rule-based at this project's data volume — not just a time-budget shortcut |
 | On-device SLM | **Qwen3-4B, Q4 GGUF** (primary); **Qwen3-8B** upgrade path if Day-1 flagship testing confirms headroom; **Gemma 3 4B** GGUF-path alternate | Sits in the size band real-device measurement confirms actually runs on mobile today (arXiv:2504.00002); real evidence of agentic/tool-use capability at 4B (MidTool, ToolRM); 8B has the strongest accuracy number (UniToolCall 93.0% precision) but unverified peak RAM alongside embedder+vision — see RESEARCH.md §Expansion: flagship-hardware agentic upgrade. Supersedes the original Gemma 3 1B pick, which was sized for a generic loaner device, not this confirmed flagship |
-| SLM harness | Fork **PhoneLM's Android demo app** (github.com/UbiquitousLearning/PhoneLM) for the JNI/GGUF-loading plumbing, swap in the Qwen3-4B weights | Only source found with a *working* Android llama.cpp harness — don't build this from scratch. Harness itself doesn't change with the model swap, only the loaded weights and prompt/tool-schema handling |
+| SLM harness | Start from upstream **llama.cpp's maintained `examples/llama.android` binding**, behind ATARI's runtime-independent explanation contract | Upstream implements private-file GGUF loading, chat templates, Kotlin `Flow` token streaming, and Android-native benchmarking. PhoneLM uses its separate `mllm` runtime and is not a llama.cpp/GGUF harness |
 | Agentic tool selection | Masked, code-governed selection at defined decision points (chiefly GoalContext source retrieval, §4.5/§4.8) — **not** a free-form multi-step agent loop | Every positive small-model tool-calling result found requires a masked/retrieval-narrowed candidate set (Octopus, Hammer, DroidCall, TinyAgent); every raw multi-step orchestration number found is weak even for frontier cloud models (HyperTool, Evoflux, TOBench) — see RESEARCH.md §Expansion: flagship-hardware agentic upgrade |
 | Voice output | Android `TextToSpeech` (offline engine) | Zero extra permission, covers HackTracker's "voice" line without touching the mic |
 | Overlay UI | `USE_FULL_SCREEN_INTENT` activity (MVP) → `SYSTEM_ALERT_WINDOW` overlay (stretch) | Full-screen intent is far lower permission-risk for a live demo; upgrade only if time remains |
@@ -249,8 +249,13 @@ RESEARCH.md § "Decision justification" — this table is the summary.
 alternative to raw llama.cpp JNI, but this survey did not verify its GGUF compatibility or confirm
 a working example against Gemma-family or Qwen3 models specifically (coverage gap — MLC-LLM/ExecuTorch
 returned no arXiv/HF-Papers hits at all). Treat it as a half-day spike early in the backend-native
-workstream, not the default: if the PhoneLM-fork + llama.cpp path is compiling and loading Qwen3-4B
+workstream, not the default: if the upstream llama.cpp Android path is compiling and loading Qwen3-4B
 within Sprint 0's first days, stop evaluating alternatives and commit.
+
+**Runtime gate:** `llama.cpp` remains the primary GGUF path because the upstream Android binding has
+already built, installed, and selected the iQOO's ARMv9.2 backend successfully. Run Qwen3-4B through
+the same device protocol and runtime-independent contract; retain a smaller model fallback if measured
+latency, peak memory, or thermal behavior misses the product gate. See `research/model-runtime.md`.
 
 ---
 
@@ -303,13 +308,14 @@ Owns everything that talks to the OS or runs an on-device model via native infer
   rolling windows.
 - `NotifLatencyTracker`: `NotificationListenerService`, log `onNotificationPosted` timestamp vs. the
   next unlock or `onNotificationRemoved` — **metadata only, never read notification text/content.**
-- SLM harness: fork PhoneLM's Android demo (github.com/UbiquitousLearning/PhoneLM), get it compiling
-  and running its own default model on-device, then swap in a **Qwen3-4B Q4 GGUF** and measure
-  cold-load time + tokens/sec on the actual **iQOO flagship's** Snapdragon NPU. **This number does not
-  exist in any paper for a phone-class Snapdragon NPU at this size — this is the first data point**
+- SLM harness: extend upstream `llama.cpp/examples/llama.android`, which is already built, installed,
+  and selecting its ARMv9.2 CPU backend on the iQOO, then load a **Qwen3-4B Q4 GGUF** and measure
+  cold-load time + tokens/sec on the actual device. PhoneLM remains a useful mobile-LLM reference,
+  but its Android demo uses the separate `mllm` runtime and is not a drop-in GGUF/`llama.cpp` host.
+  **This device/model number does not exist in the cited literature — it is a project measurement**
   (RESEARCH.md §Expansion: flagship-hardware agentic upgrade). If headroom is genuinely better than
-  expected, try Qwen3-8B as the measured upgrade; if the Qwen3 GGUF/tool-calling path is harder to
-  integrate than expected, fall back to Gemma 3 4B to stay in-family with the existing harness.
+  expected, try Qwen3-8B as the measured upgrade; if the Qwen3 path is harder to integrate than
+  expected, fall back to Gemma 3 4B on the same `llama.cpp` harness.
   **Spend real time on the few-shot prompt and tool-call schema (§4.3/§4.8), not just model loading** —
   Time2Stop (arXiv:2403.05584) measured +53.8%/+11.4% receptivity gain from adding explanations, so the
   explanation's quality is plausibly the highest-leverage thing in the whole build.
@@ -469,7 +475,8 @@ class Orchestrator(private val cooldownMs: Long = 15 * 60_000) {
 
 ### 4.3 SLM prompt shape
 
-Keep the prompt to a fixed template so a 1B model stays reliable — don't ask it to reason freely:
+Keep the prompt to a fixed template so the Qwen3-4B runtime stays bounded and testable — don't ask it
+to reason freely or let it execute an open-ended agent loop:
 
 ```
 System: You explain phone-overload signals in exactly one short, plain sentence. No lists, no advice.
@@ -478,9 +485,10 @@ User: signals={"unlocks_z":2.4,"switches_z":3.1,"notif_latency_z":-0.3}, top_sig
 Assistant: Your app-switching is much higher than your usual Tuesday-afternoon pattern.
 ```
 
-Few-shot 3-4 fixed examples in the system prompt covering each `top_signal` case beats zero-shot
-reliability at 1B scale — budget real spike time for this early in the backend-native workstream, not
-just the model-loading spike.
+Use 3-4 fixed examples covering each `top_signal` case, and evaluate them against the checked-in
+golden set before changing the template. Source selection is a separate constrained step over the
+closed allow-list in §4.8; deterministic application code fetches the selected records and remains
+the authority for all side effects.
 
 ### 4.4 Feedback loop / bandit sketch
 

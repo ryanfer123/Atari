@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "purpose": "bounded explanation generation and constrained context-source selection",
+  "model": {
+    "id": "Qwen/Qwen3-4B-GGUF",
+    "family": "qwen3",
+    "parameters": "4B",
+    "format": "GGUF",
+    "quantization": "Q4_K_M",
+    "artifact": "Qwen3-4B-Q4_K_M.gguf",
+    "weightsCommittedToGit": false,
+    "license": "Apache-2.0"
+  },
+  "prompting": {
+    "thinkingMode": false,
+    "softSwitch": "/no_think",
+    "chatTemplate": "model-embedded Jinja template"
+  },
+  "generation": {
+    "maxExplanationTokens": 48,
+    "maxSourceSelectionTokens": 40,
+    "temperature": 0.2,
+    "topP": 0.8,
+    "topK": 20,
+    "seed": 42,
+    "maximumOutputWords": 32,
+    "maximumOutputCharacters": 220
+  },
+  "sourceSelection": {
+    "constrainedBy": "JSON schema converted to llama.cpp grammar",
+    "maximumSources": 3,
+    "allowedSources": [
+      "NOTES",
+      "TODOS",
+      "HEALTH_TARGETS",
+      "CALENDAR",
+      "CAPTURE_HISTORY"
+    ],
+    "fallback": "query the request's fixed allow-list without retrying"
+  },
+  "runtime": {
+    "primary": "upstream llama.cpp Android binding",
+    "selectionGate": "full model benchmark on the target iQOO device"
+  },
+  "fallback": {
+    "required": true,
+    "type": "deterministic signal-specific explanation and fixed-source retrieval"
+  }
+}

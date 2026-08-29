@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "stage": "runtime_smoke_without_model",
+  "capturedAt": "2026-08-29",
+  "device": {
+    "manufacturer": "vivo",
+    "brand": "iQOO",
+    "marketingName": "iQOO 15",
+    "model": "I2501",
+    "soc": "QTI SM8850",
+    "ramBytes": 15959269376,
+    "androidVersion": "16",
+    "apiLevel": 36,
+    "abi": "arm64-v8a",
+    "buildFingerprint": "iQOO/I2501i/I2501:16/BP2A.250605.031.A3/compiler251023012501:user/release-keys"
+  },
+  "runtime": {
+    "name": "llama.cpp Android example",
+    "revision": "d7bd3bfcad3e29c7e49fd26f38c79ee3e9a3fd6b",
+    "package": "com.example.llama.aichat",
+    "apkBytes": 58259672,
+    "build": {
+      "gradle": "8.14",
+      "ndk": "28.2.13676358",
+      "cmake": "3.31.6",
+      "compileSdk": 36,
+      "targetSdk": 36
+    },
+    "loadedBackend": "libggml-cpu-android_armv9.2_2.so",
+    "loadedCoreLibraries": [
+      "libai-chat.so",
+      "libggml-base.so",
+      "libggml.so",
+      "libllama-common.so",
+      "libllama.so",
+      "libomp.so"
+    ]
+  },
+  "results": {
+    "installSucceeded": true,
+    "coldStartTotalTimeMs": [330, 324, 319, 284, 280],
+    "coldStartMedianMs": 319,
+    "coldStartMeanMs": 307.4,
+    "idleMemory": {
+      "pssKiB": 88347,
+      "rssKiB": 233048,
+      "swapPssKiB": 6359
+    },
+    "initialFrames": {
+      "rendered": 47,
+      "janky": 2,
+      "jankyPercent": 4.26,
+      "p50Ms": 5,
+      "p90Ms": 5,
+      "p95Ms": 22,
+      "p99Ms": 46
+    },
+    "postRunThermal": {
+      "status": 1,
+      "skinCelsius": 40.253,
+      "socdCelsius": 41.0,
+      "batteryCelsius": 38.6
+    }
+  },
+  "limitations": [
+    "No model was loaded, so this run does not measure inference latency, token throughput, peak model memory, output validity, or fallback rate.",
+    "The device was connected to AC power and airplane mode was not enforced.",
+    "NDK 28.2 was used for this temporary validation because the upstream-pinned NDK 29 download was incomplete.",
+    "The reported CPU temperatures of 99.6 C in cached vendor output were excluded as stale sentinel values; current HAL temperatures were used instead.",
+    "Frame statistics describe only the upstream harness UI startup and are not an ATARI product UI benchmark."
+  ]
+}

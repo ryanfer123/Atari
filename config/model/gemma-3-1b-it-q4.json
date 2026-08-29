@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "purpose": "retained low-memory comparison candidate; not the primary model",
+  "model": {
+    "id": "google/gemma-3-1b-it-qat-q4_0-gguf",
+    "family": "gemma3",
+    "parameters": "1B",
+    "format": "GGUF",
+    "quantization": "Q4_0 QAT",
+    "weightsCommittedToGit": false,
+    "licenseAcceptanceRequired": true
+  },
+  "generation": {
+    "maxOutputTokens": 48,
+    "temperature": 0.2,
+    "topP": 0.9,
+    "seed": 42,
+    "maximumOutputWords": 32,
+    "maximumOutputCharacters": 220
+  },
+  "runtimeEvaluation": {
+    "primary": "Qwen3-4B Q4_K_M via llama.cpp Android binding",
+    "comparison": "LiteRT-LM Kotlin or C++ API",
+    "selectionGate": "measured on the target iQOO device"
+  },
+  "fallback": {
+    "required": true,
+    "type": "deterministic signal-specific template"
+  }
+}
