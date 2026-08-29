@@ -1,0 +1,16 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - build/**
+    - android/**
+
+linter:
+  rules:
+    prefer_single_quotes: true
+    always_declare_return_types: true
+    # A public-named constructor parameter (e.g. `now`) backing a private
+    # field (`_now`) is the deliberate pattern for injectable clocks/deps
+    # across the engine modules — not something to "fix" per call site.
+    prefer_initializing_formals: false
