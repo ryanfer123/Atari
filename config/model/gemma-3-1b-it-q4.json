@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "purpose": "single-sentence behavioral deviation explanation",
+  "purpose": "retained low-memory comparison candidate; not the primary model",
   "model": {
     "id": "google/gemma-3-1b-it-qat-q4_0-gguf",
     "family": "gemma3",
@@ -19,7 +19,7 @@
     "maximumOutputCharacters": 220
   },
   "runtimeEvaluation": {
-    "primary": "llama.cpp Android binding",
+    "primary": "Qwen3-4B Q4_K_M via llama.cpp Android binding",
     "comparison": "LiteRT-LM Kotlin or C++ API",
     "selectionGate": "measured on the target iQOO device"
   },

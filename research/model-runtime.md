@@ -1,31 +1,30 @@
 # On-device model runtime decision
 
-Status: implementation spike in progress
+Status: runtime smoke test complete; full-model benchmark pending
 
 Date: 2026-08-29
 
 ## Decision
 
-Keep Gemma 3 1B Instruct QAT Q4_0 as ATARI's first explanation-model candidate.
-Use the maintained upstream `llama.cpp` Android binding as the primary integration
-reference, while preserving a runtime interface that allows a controlled
-comparison with LiteRT-LM on the target iQOO device.
+Use the official Qwen3-4B Q4_K_M GGUF as ATARI's primary on-device candidate and
+the maintained upstream `llama.cpp` Android binding as its runtime. Retain Gemma 3
+1B QAT Q4_0 as a low-memory comparison candidate rather than the product default.
 
 Do not fine-tune a model for the MVP. First establish whether constrained prompting
 plus output validation meets the explanation-quality bar.
 
 ## Why this model
 
-The official Gemma 3 technical report describes a 1B member designed for consumer
-hardware. The official QAT repository supplies a four-bit GGUF and states that QAT
-reduces memory while preserving similar quality to bfloat16. The 1B model is
-text-only and has a 32K context window; ATARI will use only a small fraction of
-that context.
+The official Qwen3-4B GGUF repository publishes Q4_K_M weights, documents direct
+`llama.cpp` use, and licenses the model under Apache-2.0. Qwen3 supports explicit
+thinking/non-thinking switching. ATARI appends `/no_think` because its two model
+tasks are short, latency-sensitive, and independently validated in native code.
 
 The model's task is intentionally narrow:
 
 ```text
-structured behavioral evidence → one grounded, supportive sentence
+structured behavioral evidence + typed context bullets → one grounded, supportive sentence
+closed source allow-list + overload signals → one schema-constrained source array
 ```
 
 General benchmark scores do not validate that specific task. ATARI therefore
@@ -37,7 +36,7 @@ needs its own prompt evaluation set and real-device measurements.
 
 Advantages:
 
-- direct support for the official Gemma QAT GGUF
+- direct support for the official Qwen3 Q4_K_M GGUF
 - maintained upstream Android example
 - model metadata parsing, app-private model loading, chat-template application,
   streaming token generation, and a benchmark entry point already exist upstream
@@ -51,7 +50,7 @@ Risks:
 
 Pinned research revision: `d7bd3bfcad3e29c7e49fd26f38c79ee3e9a3fd6b`.
 
-### LiteRT-LM
+### LiteRT-LM comparison
 
 Advantages:
 
@@ -62,7 +61,7 @@ Advantages:
 
 Risks:
 
-- uses `.litertlm` rather than the selected official GGUF artifact
+- uses `.litertlm` rather than the selected official Qwen3 GGUF artifact
 - Flutter support is community-maintained, so ATARI would still use a Kotlin or
   native bridge
 - changing runtime and model format together makes quality comparison less direct
@@ -85,13 +84,15 @@ selected runtime harness.
 The runtime-independent contract enforces these rules before UI delivery:
 
 1. Only finite, bounded, structured evidence enters the prompt.
-2. Goal and note context is treated as untrusted data, not instructions.
+2. Goal and note context is typed and treated as untrusted data, not instructions.
 3. Generation is short and conservative.
 4. Outputs containing diagnostic language, prompt leakage, multiple sentences,
    control characters, or excessive length are rejected.
 5. Runtime unavailability, inference errors, and invalid output use a deterministic
    explanation instead.
-6. Fragmentation detection, interventions, and gamification remain deterministic.
+6. Context-source selection is JSON-schema constrained to a per-request closed enum, then parsed and
+   validated again in native code with a three-source cap and a no-retry fixed fallback.
+7. Fragmentation detection, retrieval, interventions, and gamification remain deterministic.
 
 ## Device benchmark gate
 
@@ -124,8 +125,11 @@ substitute for this gate.
 
 - [Gemma 3 Technical Report](https://arxiv.org/abs/2503.19786)
 - [Official Gemma 3 1B QAT Q4_0 GGUF](https://huggingface.co/google/gemma-3-1b-it-qat-q4_0-gguf)
+- [Official Qwen3-4B GGUF](https://huggingface.co/Qwen/Qwen3-4B-GGUF)
+- [Qwen3 thinking and non-thinking modes](https://github.com/QwenLM/Qwen3/blob/main/docs/source/inference/transformers.md)
 - [llama.cpp](https://github.com/ggml-org/llama.cpp)
 - [llama.cpp Android example](https://github.com/ggml-org/llama.cpp/tree/master/examples/llama.android)
+- [llama.cpp JSON-schema constrained generation](https://github.com/ggml-org/llama.cpp/blob/master/grammars/README.md)
 - [LiteRT-LM](https://github.com/google-ai-edge/LiteRT-LM)
 - [Mobile LLM performance measurement study](https://arxiv.org/abs/2410.03613)
 - [Mobile and Edge Evaluation of Large Language Models](https://openreview.net/forum?id=aAtCQnCsya)

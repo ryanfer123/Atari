@@ -4,6 +4,7 @@ project(atari_model_contract LANGUAGES CXX)
 
 add_library(atari_model_contract STATIC
   src/explanation_service.cpp
+  src/source_selection_service.cpp
 )
 
 target_include_directories(atari_model_contract

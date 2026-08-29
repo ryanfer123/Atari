@@ -13,7 +13,12 @@ struct BehavioralEvidence {
   std::optional<double> unlock_z_score;
   std::optional<double> notification_z_score;
   std::string time_bucket;
-  std::vector<std::string> context;
+  struct ContextBullet {
+    std::string source;
+    std::string text;
+  };
+
+  std::vector<ContextBullet> context_bullets;
 };
 
 struct Prompt {
@@ -25,7 +30,9 @@ struct GenerationOptions {
   std::uint32_t max_output_tokens = 48;
   float temperature = 0.2F;
   float top_p = 0.9F;
+  std::uint32_t top_k = 20;
   std::uint64_t seed = 42;
+  std::optional<std::string> response_json_schema;
 };
 
 struct GenerationResult {
@@ -46,6 +53,7 @@ class ModelRuntime {
 
 struct ExplanationResult {
   std::string text;
+  std::vector<BehavioralEvidence::ContextBullet> context_bullets;
   bool used_model = false;
   std::string fallback_reason;
 };
