@@ -1,13 +1,8 @@
-import 'package:flutter/services.dart';
 import '../i_settings_service.dart';
-import 'platform_channels.dart';
 
 /// Concrete implementation of [ISettingsService] managing device settings and offline toggles.
 class PlatformSettingsService implements ISettingsService {
-  PlatformSettingsService({MethodChannel? methodChannel})
-      : _methodChannel = methodChannel ?? PlatformChannels.sensing;
-
-  final MethodChannel _methodChannel;
+  PlatformSettingsService();
 
   List<String> _essentialApps = const [
     'com.google.android.apps.docs',
