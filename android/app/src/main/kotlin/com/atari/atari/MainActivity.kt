@@ -2,6 +2,7 @@ package com.atari.atari
 
 import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -47,6 +48,21 @@ class MainActivity : FlutterActivity() {
                     }
                     "isCollectionServiceRunning" -> {
                         result.success(SignalCollectionService.isRunning)
+                    }
+                    "hasUsageAccess" -> {
+                        result.success(AppSwitchTracker.hasUsageAccess(applicationContext))
+                    }
+                    "getAppSwitchCountSince" -> {
+                        val sinceMillis = (call.argument<Number>("sinceMillis"))?.toLong()
+                        if (sinceMillis == null) {
+                            result.error("missing_argument", "sinceMillis is required", null)
+                        } else {
+                            result.success(AppSwitchTracker.getAppSwitchCountSince(applicationContext, sinceMillis))
+                        }
+                    }
+                    "openUsageAccessSettings" -> {
+                        startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                        result.success(null)
                     }
                     else -> result.notImplemented()
                 }

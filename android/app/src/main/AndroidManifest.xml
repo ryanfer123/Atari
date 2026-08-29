@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <!-- Foreground service + its restart paths (SignalCollectionService,
          BootReceiver, SignalCollectionHeartbeatWorker) — see
          android/.../SignalCollectionService.kt for why this is needed. -->
@@ -10,6 +11,13 @@
          frontend's one-time consent screen (Plans/IMPLEMENTATION.md §3),
          not implemented here. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+    <!-- AppSwitchTracker (UsageStatsManager). Special-access permission —
+         manual grant only via Settings, no requestPermissions() dialog
+         exists for it. See Plans/IMPLEMENTATION.md §5. -->
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions"/>
 
     <application
         android:label="atari"

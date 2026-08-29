@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'core/services/app_switch_signal_service.dart';
 import 'core/services/signal_collection_status_service.dart';
 import 'core/services/unlock_signal_service.dart';
 
@@ -21,31 +22,36 @@ class DebugHarnessApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'ATARI backend-native debug harness',
-      home: UnlockTrackerDebugScreen(),
+      home: SignalTrackerDebugScreen(),
     );
   }
 }
 
-class UnlockTrackerDebugScreen extends StatefulWidget {
-  UnlockTrackerDebugScreen({
+class SignalTrackerDebugScreen extends StatefulWidget {
+  SignalTrackerDebugScreen({
     super.key,
-    UnlockSignalService? service,
+    UnlockSignalService? unlockService,
+    AppSwitchSignalService? appSwitchService,
     SignalCollectionStatusService? statusService,
-  }) : service = service ?? UnlockSignalService(),
+  }) : unlockService = unlockService ?? UnlockSignalService(),
+       appSwitchService = appSwitchService ?? AppSwitchSignalService(),
        statusService = statusService ?? SignalCollectionStatusService();
 
-  final UnlockSignalService service;
+  final UnlockSignalService unlockService;
+  final AppSwitchSignalService appSwitchService;
   final SignalCollectionStatusService statusService;
 
   @override
-  State<UnlockTrackerDebugScreen> createState() =>
-      _UnlockTrackerDebugScreenState();
+  State<SignalTrackerDebugScreen> createState() =>
+      _SignalTrackerDebugScreenState();
 }
 
-class _UnlockTrackerDebugScreenState extends State<UnlockTrackerDebugScreen> {
-  List<DateTime> _timestamps = const [];
-  int _todayCount = 0;
+class _SignalTrackerDebugScreenState extends State<SignalTrackerDebugScreen> {
+  List<DateTime> _unlockTimestamps = const [];
+  int _unlocksToday = 0;
   bool? _serviceRunning;
+  bool? _hasUsageAccess;
+  int _appSwitchesToday = 0;
   String? _error;
   bool _loading = false;
 
@@ -63,14 +69,24 @@ class _UnlockTrackerDebugScreenState extends State<UnlockTrackerDebugScreen> {
     try {
       final now = DateTime.now();
       final startOfToday = DateTime(now.year, now.month, now.day);
-      final timestamps = await widget.service.getUnlockTimestamps();
-      final todayCount = await widget.service.getUnlockCountSince(startOfToday);
+
+      final unlockTimestamps = await widget.unlockService.getUnlockTimestamps();
+      final unlocksToday = await widget.unlockService.getUnlockCountSince(
+        startOfToday,
+      );
       final serviceRunning = await widget.statusService.isRunning();
+      final hasUsageAccess = await widget.appSwitchService.hasUsageAccess();
+      final appSwitchesToday = hasUsageAccess
+          ? await widget.appSwitchService.getAppSwitchCountSince(startOfToday)
+          : 0;
+
       if (!mounted) return;
       setState(() {
-        _timestamps = timestamps.reversed.toList();
-        _todayCount = todayCount;
+        _unlockTimestamps = unlockTimestamps.reversed.toList();
+        _unlocksToday = unlocksToday;
         _serviceRunning = serviceRunning;
+        _hasUsageAccess = hasUsageAccess;
+        _appSwitchesToday = appSwitchesToday;
       });
     } catch (e) {
       if (!mounted) return;
@@ -82,8 +98,9 @@ class _UnlockTrackerDebugScreenState extends State<UnlockTrackerDebugScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final boldStyle = const TextStyle(fontWeight: FontWeight.bold);
     return Scaffold(
-      appBar: AppBar(title: const Text('UnlockTracker debug')),
+      appBar: AppBar(title: const Text('Signal tracker debug')),
       floatingActionButton: FloatingActionButton(
         onPressed: _loading ? null : _refresh,
         child: const Icon(Icons.refresh),
@@ -93,36 +110,59 @@ class _UnlockTrackerDebugScreenState extends State<UnlockTrackerDebugScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            const Text(
-              'Lock and unlock this phone, then pull to refresh or tap the '
-              'refresh button. No permission is required for this signal.',
-            ),
-            const SizedBox(height: 16),
             Text(
               _serviceRunning == null
                   ? 'Background service: checking...'
                   : 'Background service: ${_serviceRunning! ? 'running' : 'NOT running'}',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
+              style: boldStyle.copyWith(
                 color: _serviceRunning == false ? Colors.red : null,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Unlocks today: $_todayCount',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            Text('Total recorded: ${_timestamps.length}'),
             if (_error != null) ...[
               const SizedBox(height: 16),
               Text('Error: $_error', style: const TextStyle(color: Colors.red)),
             ],
-            const SizedBox(height: 16),
-            const Text(
-              'Recent unlocks (newest first):',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            const Divider(height: 32),
+            Text(
+              'UnlockTracker',
+              style: Theme.of(context).textTheme.titleLarge,
             ),
-            for (final t in _timestamps.take(50)) Text(t.toString()),
+            const SizedBox(height: 8),
+            const Text(
+              'Lock and unlock this phone, then refresh. No permission is required for this signal.',
+            ),
+            const SizedBox(height: 8),
+            Text('Unlocks today: $_unlocksToday', style: boldStyle),
+            Text('Total recorded: ${_unlockTimestamps.length}'),
+            const SizedBox(height: 8),
+            Text('Recent unlocks (newest first):', style: boldStyle),
+            for (final t in _unlockTimestamps.take(20)) Text(t.toString()),
+            const Divider(height: 32),
+            Text(
+              'AppSwitchTracker',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            const Text('Switch between a couple of apps, then refresh.'),
+            const SizedBox(height: 8),
+            Text(
+              _hasUsageAccess == null
+                  ? 'Usage access: checking...'
+                  : 'Usage access: ${_hasUsageAccess! ? 'granted' : 'NOT granted'}',
+              style: boldStyle.copyWith(
+                color: _hasUsageAccess == false ? Colors.red : null,
+              ),
+            ),
+            if (_hasUsageAccess == false) ...[
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: () =>
+                    widget.appSwitchService.openUsageAccessSettings(),
+                child: const Text('Grant usage access'),
+              ),
+            ],
+            const SizedBox(height: 8),
+            Text('App switches today: $_appSwitchesToday', style: boldStyle),
           ],
         ),
       ),
