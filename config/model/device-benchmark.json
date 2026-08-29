@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "device": {
+    "manufacturer": "iQOO",
+    "model": "TO_BE_RECORDED",
+    "soc": "TO_BE_RECORDED",
+    "ramBytes": null,
+    "androidVersion": "TO_BE_RECORDED"
+  },
+  "protocol": {
+    "airplaneMode": true,
+    "warmupRuns": 2,
+    "measuredRuns": 10,
+    "maximumOutputTokens": 48,
+    "promptSet": "explanation-evaluation.json",
+    "runtimes": ["llama.cpp", "LiteRT-LM"]
+  },
+  "metrics": [
+    "model_file_bytes",
+    "installed_footprint_bytes",
+    "cold_load_ms",
+    "time_to_first_token_ms",
+    "prompt_tokens_per_second",
+    "generation_tokens_per_second",
+    "peak_resident_memory_bytes",
+    "warm_latency_median_ms",
+    "warm_latency_p95_ms",
+    "battery_delta_percent",
+    "start_temperature_celsius",
+    "end_temperature_celsius",
+    "valid_output_rate",
+    "fallback_rate"
+  ]
+}

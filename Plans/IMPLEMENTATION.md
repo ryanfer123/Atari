@@ -69,8 +69,8 @@ the full evidence chain. The short version, since it changes the architecture be
        ▼                                  ▼
 ┌───────────────────┐          ┌──────────────────────────────┐
 │ SlmExplainer        │          │ FocusOverlay (full-screen     │
-│ Gemma 3 1B GGUF      │          │ intent activity)               │
-│ via llama.cpp JNI     │───────▶│ muted UI, 3 essential apps,   │
+│ Gemma 3 1B QAT       │          │ intent activity)               │
+│ via runtime adapter   │───────▶│ muted UI, 3 essential apps,   │
 │ → one sentence        │  text   │ explanation text + TTS voice  │
 └─────────┬─────────┘          └───────────────┬──────────────────┘
           ▲
@@ -109,7 +109,7 @@ RESEARCH.md § "Decision justification" — this table is the summary.
 | Baseline storage | Room (SQLite) | Local-only, no sync, trivial to demo-reset between runs |
 | Classifier | Rule-based Welford z-score, hand-tuned thresholds | O(log n) vs O(n) sample-complexity theory (arXiv:2302.02334) + a direct empirical analog hitting precision=1.00/recall=1.00 at 14-day data scale (arXiv:2604.08581) both favor rule-based at this project's data volume — not just a time-budget shortcut |
 | On-device SLM | **Gemma 3 1B IT, Google's QAT Q4_0 GGUF (~1GB)**, via llama.cpp JNI | 1GB file, 32K ctx, HellaSwag 62.3/PIQA 73.8/ARC-e 73.0 — best verified param/quality/quant fit at this budget. No published QAT-vs-bf16 quality delta though (model card is qualitative only) — see RESEARCH.md §Decision justification |
-| SLM harness | Fork **PhoneLM's Android demo app** (github.com/UbiquitousLearning/PhoneLM) for the JNI/GGUF-loading plumbing, swap in the Gemma weights | Only source found with a *working* Android llama.cpp harness — don't build this from scratch |
+| SLM harness | Start from upstream **llama.cpp's maintained `examples/llama.android` binding**, behind ATARI's runtime-independent explanation contract | Upstream already implements private-file GGUF loading, chat templates, Kotlin `Flow` token streaming, and benchmarking; PhoneLM uses its separate `mllm` runtime and is not the Gemma/llama.cpp harness |
 | Voice output | Android `TextToSpeech` (offline engine) | Zero extra permission, covers HackTracker's "voice" line without touching the mic |
 | Overlay UI | `USE_FULL_SCREEN_INTENT` activity (MVP) → `SYSTEM_ALERT_WINDOW` overlay (stretch) | Full-screen intent is far lower permission-risk for a live demo; upgrade only if time remains |
 | Dev bridge | Office Kit, paired for the whole build | Screen mirror for on-device debugging, file transfer for pulling logs off the loaner phone — scored on real usage, use it don't fake it |
@@ -118,12 +118,12 @@ RESEARCH.md § "Decision justification" — this table is the summary.
 | Cross-source combination | Flat context bullets concatenated at prompt time — **no joint fusion/reasoning** | Literature (Setoka, Claw-Anything) shows even frontier models struggle at open-ended multi-source fusion (34.5% pass@1) — don't attempt it at hackathon scale |
 | Calendar | Google Calendar API via OAuth, **opt-in module, separate permission** | Only component needing network/auth — architected as additive so the core loop's zero-`INTERNET` claim stays literally true |
 
-**Path not taken:** MediaPipe/Google AI Edge's LLM Inference API was considered as a higher-level
-alternative to raw llama.cpp JNI, but this survey did not verify its GGUF compatibility or confirm
-a working example against Gemma 3 1B specifically (coverage gap — MLC-LLM/ExecuTorch returned no
-arXiv/HF-Papers hits at all). Treat it as a Day 1 half-day spike, not the default: if the PhoneLM-fork
-+ llama.cpp path is compiling and loading a model within the first prep day, stop evaluating
-alternatives and commit.
+**Runtime gate:** `llama.cpp` remains the primary GGUF path because Google publishes the selected
+Gemma 3 1B QAT artifact directly in that format and upstream now maintains an Android binding.
+LiteRT-LM has since matured into an official Android runtime with stable Kotlin/C++ APIs and documented
+Gemma 3 1B support, so it is the comparison candidate rather than a dismissed path. Run the same
+prompt set through both on the target iQOO device; keep the adapter with the best measured latency,
+memory, thermal behavior, build reliability, and valid-output rate. See `research/model-runtime.md`.
 
 ---
 
@@ -133,8 +133,10 @@ alternatives and commit.
 - Confirm pre-build rules with organizers (§0).
 - Set up Android Studio, pair Office Kit to the loaner/dev phone, confirm screen mirror + file
   transfer work (this is graded usage — start the clock on it now, not day 6).
-- Clone PhoneLM's Android demo, get it compiling and running its own default model on-device.
-- Download `google/gemma-3-1b-it-qat-q4_0-gguf`, swap it into the PhoneLM harness, measure
+- Build upstream `llama.cpp/examples/llama.android`, then integrate its library behind ATARI's
+  `ModelRuntime` boundary rather than copying the sample application wholesale.
+- After accepting the Gemma terms, download `google/gemma-3-1b-it-qat-q4_0-gguf`, load it through
+  the adapter, and measure
   cold-load time and tokens/sec on the actual loaner phone's Snapdragon SoC. **This number does not
   exist in any paper — you are the first data point.** If it's too slow, fall back to
   `Qwen2.5-0.5B-Instruct-GGUF` (smaller, from RESEARCH.md "Also relevant").

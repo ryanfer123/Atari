@@ -1,0 +1,30 @@
+name: Model contract
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/model-contract.yml"
+      - "native/model/**"
+      - "scripts/test-model-contract.sh"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/model-contract.yml"
+      - "native/model/**"
+      - "scripts/test-model-contract.sh"
+
+permissions:
+  contents: read
+
+jobs:
+  native-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build and test explanation contract
+        run: ./scripts/test-model-contract.sh

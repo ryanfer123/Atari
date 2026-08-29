@@ -1,13 +1,12 @@
 # Native inference
 
-This directory will contain the C/C++ runtime used for local model inference and
-the bridge exposed to Flutter or the Android host.
+This directory contains the runtime-independent model contract and will contain
+the selected C/C++ runtime adapter exposed to Flutter or the Android host.
 
 ```text
 native/
-└── llama/
-    ├── llama.cpp integration
-    └── ATARI inference bridge
+├── model/             Tested prompt, output, and fallback contract
+└── llama/             Planned llama.cpp Android runtime adapter
 ```
 
 Model weights are intentionally excluded from Git.
