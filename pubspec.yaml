@@ -1,0 +1,28 @@
+name: atari
+description: >
+  Empathetic Intelligence for User Productivity & On-Device Orchestration.
+publish_to: "none"
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  drift: ^2.24.0
+  sqlite3_flutter_libs: ^0.5.27
+  sqlite3: ^2.9.0
+  path_provider: ^2.1.5
+  path: ^1.9.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  drift_dev: ^2.24.0
+  build_runner: ^2.4.14
+  test: ^1.25.15
+
+flutter:
+  uses-material-design: true
