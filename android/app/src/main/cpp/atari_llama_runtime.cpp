@@ -102,7 +102,7 @@ Java_com_atari_slm_SlmBridge_nativeRuntimeInit(
 
     llama_log_set(log_message, nullptr);
     const std::string library_dir = from_jstring(env, native_library_dir);
-    ggml_backend_load_all_from_path(library_dir.c_str());
+    // Dynamic backend loading disabled in CMake; CPU backend is statically linked.
     llama_backend_init();
     g_backend_initialized = true;
     return 0;

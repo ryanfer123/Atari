@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../models/models.dart';
 import '../i_slm_explainer_service.dart';
 import 'platform_channels.dart';
@@ -105,8 +106,9 @@ class PlatformSlmService implements ISlmExplainerService {
     try {
       final result = await _methodChannel.invokeMapMethod<String, dynamic>('initRuntime');
       if (result?['success'] == true) {
-        // Automatically load model from external files directory
-        final modelPath = '/storage/emulated/0/Android/data/com.atari/files/model.gguf';
+        // Automatically load model from internal files directory
+        final directory = await getApplicationSupportDirectory();
+        final modelPath = '${directory.path}/model.gguf';
         final loadResult = await loadModel(modelPath);
         if (loadResult['success'] == true) {
           return {'success': true, 'message': 'GGML init & model loaded'};
