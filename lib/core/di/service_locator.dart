@@ -16,6 +16,9 @@ import '../services/fakes/fake_feedback_loop_service.dart';
 import '../services/i_settings_service.dart';
 import '../services/fakes/fake_settings_service.dart';
 import '../../features/dashboard/viewmodels/dashboard_viewmodel.dart';
+import '../../features/goals/viewmodels/goals_viewmodel.dart';
+import '../../features/gamification/viewmodels/gamification_viewmodel.dart';
+import '../../features/insights/viewmodels/insights_viewmodel.dart';
 
 final getIt = GetIt.instance;
 
@@ -34,5 +37,19 @@ void setupFakes() {
     baselineService: getIt(),
     gamificationService: getIt(),
     feedbackLoopService: getIt(),
+  ));
+
+  getIt.registerFactory(() => GoalsViewModel(
+    goalContextService: getIt(),
+  ));
+
+  getIt.registerFactory(() => GamificationViewModel(
+    gamificationService: getIt(),
+  ));
+
+  getIt.registerFactory(() => InsightsViewModel(
+    baselineService: getIt(),
+    overloadService: getIt(),
+    explainerService: getIt(),
   ));
 }

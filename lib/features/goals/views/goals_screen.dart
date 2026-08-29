@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../viewmodels/goals_viewmodel.dart';
 import '../../../core/widgets/atari_card.dart';
 import '../../../core/widgets/atari_button.dart';
 import '../../../core/widgets/atari_text_field.dart';
 import '../../../core/theme/atari_theme.dart';
+import '../../../core/models/view_state.dart';
 
 class GoalsScreen extends StatelessWidget {
   const GoalsScreen({super.key});
@@ -34,15 +37,23 @@ class GoalsScreen extends StatelessWidget {
             ],
           ),
         ),
-        body: const Padding(
-          padding: EdgeInsets.fromLTRB(24, 24, 24, 160),
-          child: TabBarView(
-            children: [
-              _TasksTabView(),
-              _NotesTabView(),
-              _HealthTabView(),
-            ],
-          ),
+        body: Consumer<GoalsViewModel>(
+          builder: (context, vm, child) {
+            if (vm.state == ViewState.loading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 160),
+              child: TabBarView(
+                children: [
+                  _TasksTabView(vm: vm),
+                  _NotesTabView(vm: vm),
+                  _HealthTabView(vm: vm),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
@@ -50,13 +61,22 @@ class GoalsScreen extends StatelessWidget {
 }
 
 class _TasksTabView extends StatefulWidget {
-  const _TasksTabView();
+  final GoalsViewModel vm;
+  const _TasksTabView({required this.vm});
+
   @override
   State<_TasksTabView> createState() => _TasksTabViewState();
 }
 
 class _TasksTabViewState extends State<_TasksTabView> {
   bool _isAdding = false;
+  final _taskController = TextEditingController();
+
+  @override
+  void dispose() {
+    _taskController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +91,8 @@ class _TasksTabViewState extends State<_TasksTabView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const AtariTextField(
+                AtariTextField(
+                  controller: _taskController,
                   labelText: 'What needs doing?',
                   hintText: 'Enter task...',
                 ),
@@ -89,11 +110,61 @@ class _TasksTabViewState extends State<_TasksTabView> {
                 ),
                 const SizedBox(height: 24),
                 AtariButton(
-                  onPressed: () => setState(() => _isAdding = false),
+                  onPressed: () {
+                    if (_taskController.text.trim().isNotEmpty) {
+                      widget.vm.addTodo(title: _taskController.text.trim());
+                      _taskController.clear();
+                    }
+                    setState(() => _isAdding = false);
+                  },
                   child: const Center(child: Text('Add task')),
                 ),
               ],
             ),
+          ),
+        ],
+      );
+    }
+
+    if (widget.vm.todos.isNotEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: ListView.separated(
+              itemCount: widget.vm.todos.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final todo = widget.vm.todos[index];
+                return AtariCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      Checkbox(
+                        value: todo.isCompleted,
+                        activeColor: AtariTheme.primaryYellow,
+                        onChanged: (_) => widget.vm.toggleTodo(todo.id),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          todo.title,
+                          style: TextStyle(
+                            decoration: todo.isCompleted ? TextDecoration.lineThrough : null,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+          AtariButton(
+            onPressed: () => setState(() => _isAdding = true),
+            child: const Center(child: Text('+ Add a task')),
           ),
         ],
       );
@@ -124,13 +195,22 @@ class _TasksTabViewState extends State<_TasksTabView> {
 }
 
 class _NotesTabView extends StatefulWidget {
-  const _NotesTabView();
+  final GoalsViewModel vm;
+  const _NotesTabView({required this.vm});
+
   @override
   State<_NotesTabView> createState() => _NotesTabViewState();
 }
 
 class _NotesTabViewState extends State<_NotesTabView> {
   bool _isAdding = false;
+  final _noteController = TextEditingController();
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -145,17 +225,50 @@ class _NotesTabViewState extends State<_NotesTabView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const AtariTextField(
-                  labelText: '', // No label above this one in the screenshot
+                AtariTextField(
+                  controller: _noteController,
+                  labelText: '',
                   hintText: 'Anything worth remembering',
                 ),
                 const SizedBox(height: 24),
                 AtariButton(
-                  onPressed: () => setState(() => _isAdding = false),
+                  onPressed: () {
+                    if (_noteController.text.trim().isNotEmpty) {
+                      widget.vm.addNote(_noteController.text.trim());
+                      _noteController.clear();
+                    }
+                    setState(() => _isAdding = false);
+                  },
                   child: const Center(child: Text('Save')),
                 ),
               ],
             ),
+          ),
+        ],
+      );
+    }
+
+    if (widget.vm.notes.isNotEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: ListView.separated(
+              itemCount: widget.vm.notes.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final note = widget.vm.notes[index];
+                return AtariCard(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(note.text, style: const TextStyle(fontWeight: FontWeight.w500)),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+          AtariButton(
+            onPressed: () => setState(() => _isAdding = true),
+            child: const Center(child: Text('+ Write a note')),
           ),
         ],
       );
@@ -186,13 +299,24 @@ class _NotesTabViewState extends State<_NotesTabView> {
 }
 
 class _HealthTabView extends StatefulWidget {
-  const _HealthTabView();
+  final GoalsViewModel vm;
+  const _HealthTabView({required this.vm});
+
   @override
   State<_HealthTabView> createState() => _HealthTabViewState();
 }
 
 class _HealthTabViewState extends State<_HealthTabView> {
   bool _isAdding = false;
+  final _metricController = TextEditingController();
+  final _targetController = TextEditingController();
+
+  @override
+  void dispose() {
+    _metricController.dispose();
+    _targetController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -207,22 +331,65 @@ class _HealthTabViewState extends State<_HealthTabView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const AtariTextField(
+                AtariTextField(
+                  controller: _metricController,
                   labelText: 'Metric',
                   hintText: 'steps, water, sleep',
                 ),
                 const SizedBox(height: 16),
-                const AtariTextField(
+                AtariTextField(
+                  controller: _targetController,
                   labelText: 'Target',
-                  hintText: '',
+                  hintText: '8000',
                 ),
                 const SizedBox(height: 24),
                 AtariButton(
-                  onPressed: () => setState(() => _isAdding = false),
+                  onPressed: () {
+                    final metric = _metricController.text.trim();
+                    final target = double.tryParse(_targetController.text.trim()) ?? 0.0;
+                    if (metric.isNotEmpty) {
+                      widget.vm.addHealthTarget(metric: metric, threshold: target);
+                      _metricController.clear();
+                      _targetController.clear();
+                    }
+                    setState(() => _isAdding = false);
+                  },
                   child: const Center(child: Text('Add target')),
                 ),
               ],
             ),
+          ),
+        ],
+      );
+    }
+
+    if (widget.vm.healthTargets.isNotEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: ListView.separated(
+              itemCount: widget.vm.healthTargets.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final target = widget.vm.healthTargets[index];
+                return AtariCard(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(target.metric, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text('${target.threshold.toInt()} target', style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+          AtariButton(
+            onPressed: () => setState(() => _isAdding = true),
+            child: const Center(child: Text('+ Add a target')),
           ),
         ],
       );
