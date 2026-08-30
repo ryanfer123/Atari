@@ -1,3 +1,4 @@
+import 'package:atari/core/models/difficulty_tier.dart';
 import 'package:atari/core/models/gamification_event.dart';
 import 'package:atari/engine/gamification/gamification_progress.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,9 +14,42 @@ void main() {
   group('xpForTrigger', () {
     test('awards the fixed XP amount per trigger from §4.7', () {
       expect(xpForTrigger(GamificationTrigger.interventionWorked), 15);
-      expect(xpForTrigger(GamificationTrigger.todoCompleted), 10);
       expect(xpForTrigger(GamificationTrigger.healthTargetMet), 10);
       expect(xpForTrigger(GamificationTrigger.captureOrganized), 5);
+    });
+
+    test('completing a task scales with its difficulty tier', () {
+      // The point of the model picking a tier: a flat award would
+      // discard it, and would contradict the difficulty chip and the
+      // completion snackbar, which both show xpForDifficulty.
+      for (final tier in DifficultyTier.values) {
+        expect(
+          xpForTrigger(GamificationTrigger.todoCompleted, difficulty: tier),
+          xpForDifficulty(tier),
+          reason: 'tier $tier should award exactly what the UI advertises',
+        );
+      }
+
+      // Guards against the tiers collapsing to one number again.
+      expect(
+        xpForTrigger(
+          GamificationTrigger.todoCompleted,
+          difficulty: DifficultyTier.heavy,
+        ),
+        greaterThan(
+          xpForTrigger(
+            GamificationTrigger.todoCompleted,
+            difficulty: DifficultyTier.trivial,
+          ),
+        ),
+      );
+    });
+
+    test('a task with no tier yet falls back to the default award', () {
+      expect(
+        xpForTrigger(GamificationTrigger.todoCompleted),
+        xpForDifficulty(fallbackDifficultyTier),
+      );
     });
   });
 

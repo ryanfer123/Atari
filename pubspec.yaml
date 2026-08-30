@@ -16,6 +16,14 @@ dependencies:
   sqlite3: ^2.9.0
   path_provider: ^2.1.5
   path: ^1.9.1
+  # Pixel cropping for the screen-capture flow. Not a model dependency —
+  # the vision models stay behind OcrService placeholders.
+  image: ^4.3.0
+  # UI only — the draggable cat and the space background. No model or
+  # data dependency. Orbitron/Rajdhani are bundled font files below,
+  # not the google_fonts package, which fetches over the network on
+  # first use — this app makes no network calls at all.
+  lottie: ^3.5.1
 
 dev_dependencies:
   flutter_test:
@@ -24,6 +32,33 @@ dev_dependencies:
   drift_dev: ^2.24.0
   build_runner: ^2.4.14
   test: ^1.25.15
+  # Dev-only: generates the mipmap launcher icons from
+  # assets/icon/app_icon.jpg (see flutter_launcher_icons.yaml). Not a
+  # runtime dependency of the app itself.
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/lotties/
+  fonts:
+    - family: Orbitron
+      fonts:
+        - asset: assets/fonts/Orbitron-Variable.ttf
+          weight: 500
+        - asset: assets/fonts/Orbitron-Variable.ttf
+          weight: 600
+        - asset: assets/fonts/Orbitron-Variable.ttf
+          weight: 700
+        - asset: assets/fonts/Orbitron-Variable.ttf
+          weight: 800
+    - family: Rajdhani
+      fonts:
+        - asset: assets/fonts/Rajdhani-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Rajdhani-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Rajdhani-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Rajdhani-Bold.ttf
+          weight: 700

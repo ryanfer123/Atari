@@ -1,4 +1,5 @@
 import '../../core/database/app_database.dart';
+import '../../core/models/difficulty_tier.dart';
 import '../../core/models/gamification_event.dart';
 import 'gamification_progress.dart';
 
@@ -36,10 +37,17 @@ class GamificationEngine {
 
   /// Awards XP for [trigger] and persists the event. XP totals are only
   /// ever added to — this table has no update/delete path.
-  Future<GamificationEvent> onTrigger(GamificationTrigger trigger) async {
+  ///
+  /// Pass [difficulty] when completing a task so the award scales with its
+  /// tier. The amount is computed here rather than by the caller so the
+  /// number written to the log is always the one `xpForTrigger` defines.
+  Future<GamificationEvent> onTrigger(
+    GamificationTrigger trigger, {
+    DifficultyTier? difficulty,
+  }) async {
     final event = GamificationEvent(
       trigger: trigger,
-      xpAwarded: xpForTrigger(trigger),
+      xpAwarded: xpForTrigger(trigger, difficulty: difficulty),
       timestamp: _now(),
     );
     await _db

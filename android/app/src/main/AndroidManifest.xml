@@ -19,8 +19,26 @@
         android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions"/>
 
+    <!-- User-confirmed reminders/alarms (ReminderScheduler). Exact alarms
+         need a user grant on Android 12+; ReminderScheduler falls back to
+         an inexact alarm when it isn't granted rather than failing. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
+    <uses-permission android:name="android.permission.VIBRATE"/>
+
+    <!-- One-frame screen capture for the circle-to-crop flow. The user
+         grants projection consent each session; nothing is recorded
+         continuously. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION"/>
+    <!-- Floating capture bubble drawn over other apps. Manual grant only
+         (Settings > Special access > Display over other apps). -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+
+    <!-- Capture flow: photographing a schedule/page to extract items. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
+
     <application
-        android:label="atari"
+        android:label="ATARI"
         android:name=".AtariApplication"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -75,6 +93,19 @@
                 <action android:name="android.service.notification.NotificationListenerService"/>
             </intent-filter>
         </service>
+
+        <!-- Circle-to-Search: holds the projection consent for the session
+             and owns the bubble/selection overlay windows. -->
+        <service
+            android:name=".CaptureOverlayService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
+
+        <!-- Fires user-confirmed reminders scheduled by ReminderScheduler.
+             Not exported: only our own AlarmManager PendingIntent triggers it. -->
+        <receiver
+            android:name=".ReminderReceiver"
+            android:exported="false"/>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

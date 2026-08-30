@@ -36,6 +36,37 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        ndk {
+            // arm64 only. `+=` would *add* to the default ABI set rather
+            // than replace it, and the 32-bit build then fails outright:
+            // GGML_CPU_ARM_ARCH below is an arm64 baseline, which
+            // collides with the compatibility shims ggml compiles when
+            // __aarch64__ is undefined. Clearing first is what makes
+            // this a restriction instead of an addition.
+            abiFilters.clear()
+            abiFilters.add("arm64-v8a")
+        }
+
+        externalNativeBuild {
+            cmake {
+                arguments += listOf(
+                    "-DANDROID_STL=c++_shared",
+                    "-DCMAKE_BUILD_TYPE=Release",
+                )
+                // llama.cpp is heavy; release flags here apply to the
+                // native library regardless of the Flutter build mode,
+                // because a debug-optimised SLM is unusably slow.
+                cppFlags += "-O3"
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("../../native/llama/CMakeLists.txt")
+            version = "3.22.1"
+        }
     }
 
     buildTypes {
@@ -59,4 +90,13 @@ flutter {
 
 dependencies {
     implementation("androidx.work:work-runtime-ktx:2.10.0")
+    // PP-OCRv5 detection + recognition run through here. The AAR ships
+    // the native runtime for every ABI, which is why no NDK/JNI code of
+    // our own is needed to get real OCR working.
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.20.0")
+    // Renders the floating capture bubble's cat animation. Native, not
+    // the Flutter `lottie` package — the bubble is a raw WindowManager
+    // overlay view (CaptureOverlayService) that lives outside the
+    // Flutter engine entirely.
+    implementation("com.airbnb.android:lottie:6.6.0")
 }
